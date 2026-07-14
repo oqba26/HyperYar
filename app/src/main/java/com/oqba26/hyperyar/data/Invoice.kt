@@ -1,19 +1,29 @@
 package com.oqba26.hyperyar.data
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 import kotlinx.serialization.Serializable
+
+@Serializable
+enum class InvoiceType {
+    SALE, PURCHASE
+}
 
 @Serializable
 @Entity(tableName = "invoices")
 data class Invoice(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val customerId: Int? = null,
+    val timestamp: Long = System.currentTimeMillis(),
+    val type: InvoiceType = InvoiceType.SALE,
     val totalAmount: Double = 0.0,
-    val discount: Double = 0.0,
-    val paidAmount: Double = 0.0,
-    val paymentMethod: String = "Cash", // Cash, Card, Credit
-    val timestamp: Long = System.currentTimeMillis()
+    val totalDiscount: Double = 0.0,
+    val customerId: Int? = null,
+    val supplierId: Int? = null,
+    val amountPaid: Double = 0.0,
+    val dueDate: Long? = null,
+    val isSynced: Boolean = false
 )
 
 @Serializable
@@ -23,7 +33,18 @@ data class InvoiceItem(
     val invoiceId: Int,
     val productId: Int,
     val productName: String,
-    val quantity: Double,
-    val unitPrice: Double,
-    val totalLine: Double
+    val quantity: Double = 0.0,
+    val unit: String = "عدد",
+    val priceAtSale: Double = 0.0,
+    val buyPriceAtSale: Double = 0.0,
+    val discount: Double = 0.0
+)
+
+data class InvoiceWithItems(
+    @Embedded val invoice: Invoice,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "invoiceId"
+    )
+    val items: List<InvoiceItem>
 )

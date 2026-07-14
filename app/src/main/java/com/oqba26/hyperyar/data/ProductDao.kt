@@ -8,6 +8,9 @@ interface ProductDao {
     @Query("SELECT * FROM products ORDER BY name ASC")
     fun getAllProducts(): Flow<List<Product>>
 
+    @Query("SELECT * FROM products ORDER BY name ASC")
+    suspend fun getAllProductsList(): List<Product>
+
     @Query("SELECT * FROM products WHERE barcode = :barcode LIMIT 1")
     suspend fun getProductByBarcode(barcode: String): Product?
 
@@ -28,4 +31,7 @@ interface ProductDao {
     
     @Query("UPDATE products SET stock = stock - :quantity WHERE id = :productId")
     suspend fun reduceStock(productId: Int, quantity: Double)
+
+    @Query("UPDATE products SET stock = stock + :quantity WHERE id = :productId")
+    suspend fun addStock(productId: Int, quantity: Double)
 }

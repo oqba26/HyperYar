@@ -2,6 +2,6 @@
   "versionCode": 1,
   "versionName": "1.0.0",
   "url": "https://github.com/oqba26/HyperYar/releases/download/v1.0.0/HyperYar-v1.0.0.apk",
-  "releaseNotes": "راه‌اندازی اولیه سیستم آپدیت",
-  "isForceUpdate": false
+  "releaseNotes": "افزودن بخش‌های حسابداری، چک و مدیریت هزینه‌ها؛ بهبود رابط کاربری و نمودارها؛ خروجی PDF فاکتور و پشتیبان‌گیری؛ ادغام هوش مصنوعی Gemini؛ رفع باگ‌ها",
+  "isForceUpdate": true
 }
