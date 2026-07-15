@@ -39,3 +39,13 @@
     public static *** v(...);
     public static *** i(...);
 }
+
+# --- رفع خطاهای R8 مربوط به کتابخانه‌های جانبی (مانند Sheetz/POI) ---
+-dontwarn aQute.bnd.annotation.spi.**
+-dontwarn org.apache.batik.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn org.osgi.framework.**
+-dontwarn javax.xml.stream.**
+-dontwarn javax.xml.namespace.**
+-dontwarn org.w3c.dom.events.**
+-dontwarn org.apache.poi.**
