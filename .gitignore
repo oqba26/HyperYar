@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# پوشه‌های موقت و محلی
+.kotlin/
+.artifacts/
+
+# حساس: اطلاعات امضای اپلیکیشن
+keystore.properties
+*.jks
+*.keystore

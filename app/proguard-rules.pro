@@ -1,10 +1,41 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in C:\Users\msi\AppData\Local\Android\Sdk/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# --- قوانین عمومی اندروید ---
+-keepattributes SourceFile,LineNumberTable
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes InnerClasses
 
-# Add any custom rules here that might be necessary for your project.
+# --- قوانین اختصاصی پروژه HyperYar ---
+
+# حفظ مدل‌های داده (برای دیتابیس Room و Serialization)
+-keep class com.oqba26.hyperyar.data.** { *; }
+
+# --- Kotlin Serialization ---
+-keepattributes *Annotation*, InnerClasses
+-keepclassmembers class ** {
+    @kotlinx.serialization.SerialName <fields>;
+}
+-keepclassmembers class com.oqba26.hyperyar.data.** {
+    *** Companion;
+}
+
+# --- Room Database ---
+-keep class * extends androidx.room.RoomDatabase
+-keep class * extends androidx.room.Entity
+-keep class * implements androidx.room.Dao
+-keepclassmembers class * {
+  @androidx.room.Database *;
+  @androidx.room.Dao *;
+  @androidx.room.Entity *;
+}
+
+# --- Coroutines ---
+# قوانین عمومی برای کوروتین‌ها (معمولاً توسط خود کتابخانه مدیریت می‌شود، اما برای اطمینان بیشتر)
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+
+# حذف لاگ‌های سیستم در نسخه نهایی برای امنیت بیشتر
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}
