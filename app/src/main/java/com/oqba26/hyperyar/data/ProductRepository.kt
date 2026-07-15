@@ -50,6 +50,18 @@ class ProductRepository(
     @Suppress("unused")
     fun getInvoicesInDateRange(start: Long, end: Long) = invoiceDao.getInvoicesInDateRange(start, end)
     
+    suspend fun deleteInvoice(invoice: Invoice, items: List<InvoiceItem>) {
+        invoiceDao.deleteInvoice(invoice)
+        items.forEach { item ->
+            when (invoice.type) {
+                InvoiceType.SALE -> productDao.addStock(item.productId, item.quantity)
+                InvoiceType.PURCHASE -> productDao.reduceStock(item.productId, item.quantity)
+                InvoiceType.RETURN_SALE -> productDao.reduceStock(item.productId, item.quantity)
+                InvoiceType.RETURN_PURCHASE -> productDao.addStock(item.productId, item.quantity)
+            }
+        }
+    }
+
     suspend fun saveInvoice(
         invoice: Invoice, 
         items: List<InvoiceItem>, 
@@ -58,26 +70,51 @@ class ProductRepository(
         val id = invoiceDao.insertInvoice(invoice).toInt()
         items.forEach { item ->
             invoiceDao.insertInvoiceItem(item.copy(invoiceId = id))
-            if (invoice.type == InvoiceType.SALE) {
-                productDao.reduceStock(item.productId, item.quantity)
-                inventoryLogDao.insertLog(
-                    InventoryLog(
-                        productId = item.productId, 
-                        changeAmount = -item.quantity, 
-                        type = "Sale", 
-                        note = "فاکتور فروش #$id"
+            when (invoice.type) {
+                InvoiceType.SALE -> {
+                    productDao.reduceStock(item.productId, item.quantity)
+                    inventoryLogDao.insertLog(
+                        InventoryLog(
+                            productId = item.productId, 
+                            changeAmount = -item.quantity, 
+                            type = "Sale", 
+                            note = "فاکتور فروش #$id"
+                        )
                     )
-                )
-            } else {
-                productDao.addStock(item.productId, item.quantity)
-                inventoryLogDao.insertLog(
-                    InventoryLog(
-                        productId = item.productId, 
-                        changeAmount = item.quantity, 
-                        type = "Purchase", 
-                        note = "فاکتور خرید #$id"
+                }
+                InvoiceType.PURCHASE -> {
+                    productDao.addStock(item.productId, item.quantity)
+                    inventoryLogDao.insertLog(
+                        InventoryLog(
+                            productId = item.productId, 
+                            changeAmount = item.quantity, 
+                            type = "Purchase", 
+                            note = "فاکتور خرید #$id"
+                        )
                     )
-                )
+                }
+                InvoiceType.RETURN_SALE -> {
+                    productDao.addStock(item.productId, item.quantity)
+                    inventoryLogDao.insertLog(
+                        InventoryLog(
+                            productId = item.productId, 
+                            changeAmount = item.quantity, 
+                            type = "Return Sale", 
+                            note = "مرجوعی فروش #$id"
+                        )
+                    )
+                }
+                InvoiceType.RETURN_PURCHASE -> {
+                    productDao.reduceStock(item.productId, item.quantity)
+                    inventoryLogDao.insertLog(
+                        InventoryLog(
+                            productId = item.productId, 
+                            changeAmount = -item.quantity, 
+                            type = "Return Purchase", 
+                            note = "مرجوعی خرید #$id"
+                        )
+                    )
+                }
             }
         }
         

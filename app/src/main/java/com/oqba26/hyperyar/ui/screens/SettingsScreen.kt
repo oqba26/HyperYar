@@ -38,6 +38,7 @@ fun SettingsScreen(
     val selectedFont by settingsManager.selectedFont.collectAsState(initial = "Vazirmatn")
     val selectedTheme by settingsManager.selectedTheme.collectAsState(initial = "Purple")
     val isSyncEnabled by settingsManager.isSyncEnabled.collectAsState(initial = true)
+    val userRole by settingsManager.userRole.collectAsState(initial = "ADMIN")
     val shopNamePersistent by settingsManager.shopName.collectAsState(initial = "")
     val shopPhonePersistent by settingsManager.shopPhone.collectAsState(initial = "")
     val shopAddressPersistent by settingsManager.shopAddress.collectAsState(initial = "")
@@ -167,39 +168,7 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-            Text(
-                text = "امکانات پیشرفته",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            SettingsItem(
-                title = "مدیریت کاربران و امنیت",
-                subtitle = "تعریف صندوق‌دار و محدودیت دسترسی",
-                icon = Icons.Default.AdminPanelSettings,
-                onClick = { Toast.makeText(context, "بخش مدیریت کاربران فعال شد", Toast.LENGTH_SHORT).show() }
-            )
-
-            SettingsItem(
-                title = "تنظیمات چاپگر",
-                subtitle = "اتصال به چاپگر حرارتی بلوتوثی",
-                icon = Icons.Default.Print,
-                onClick = { Toast.makeText(context, "در حال جستجوی چاپگر بلوتوث...", Toast.LENGTH_SHORT).show() }
-            )
-
-            SettingsItem(
-                title = "باشگاه مشتریان",
-                subtitle = "تنظیم امتیازات و تخفیف‌های خودکار",
-                icon = Icons.Default.CardMembership,
-                onClick = { Toast.makeText(context, "سیستم امتیازدهی خودکار فعال است", Toast.LENGTH_SHORT).show() }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
+                Button(
                     onClick = {
                         scope.launch {
                             settingsManager.saveShopInfo(
@@ -318,6 +287,39 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(32.dp))
+
+            Text(
+                text = "مدیریت دسترسی",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "نقش کاربر فعلی", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = if (userRole == "ADMIN") "مدیر (دسترسی کامل)" else "صندوق‌دار (دسترسی محدود)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                TextButton(onClick = {
+                    scope.launch {
+                        val newRole = if (userRole == "ADMIN") "STAFF" else "ADMIN"
+                        settingsManager.saveUserRole(newRole)
+                    }
+                }) {
+                    Text(if (userRole == "ADMIN") "تغییر به صندوق‌دار" else "تغییر به مدیر")
                 }
             }
 

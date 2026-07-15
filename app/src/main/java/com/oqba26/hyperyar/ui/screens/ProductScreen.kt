@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProductScreen(
     viewModel: ProductViewModel,
+    isAdmin: Boolean = true
 ) {
     val products by viewModel.allProducts.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -327,6 +328,7 @@ fun ProductScreen(
                 dueInstallmentsCount = dueInstallmentsCount,
                 expiringCount = expiringProducts.size,
                 isPurchaseMode = isPurchaseMode,
+                isAdmin = isAdmin,
                 onLowStockClick = { showLowStockDialog = true },
                 onExpiringClick = { showExpiringDialog = true },
                 onTogglePurchaseMode = { viewModel.togglePurchaseMode() }
@@ -350,6 +352,29 @@ fun ProductScreen(
                 onCategorySelected = { selectedCategory = it }
             )
 
+            val favoriteProducts = products.filter { it.isFavorite }
+            if (favoriteProducts.isNotEmpty() && searchQuery.isBlank() && selectedCategory == "همه") {
+                Text(
+                    text = "دسترسی سریع (برگزیده‌ها)",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(favoriteProducts, key = { "fav_${it.id}" }) { product ->
+                        FavoriteProductChip(
+                            product = product,
+                            onAddToCart = { viewModel.addToCart(product) }
+                        )
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), thickness = 0.5.dp)
+            }
+
             if (filteredProducts.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -367,10 +392,18 @@ fun ProductScreen(
                     items(filteredProducts, key = { it.id }) { product ->
                     ProductItem(
                         product = product,
+                        isPurchaseMode = isPurchaseMode,
+                        isAdmin = isAdmin,
+                        shopName = shopName,
                         onDelete = { viewModel.delete(product) },
                         onEdit = { productToEdit = product },
                         onWaste = { productForWaste = product },
                         onAddToCart = { viewModel.addToCart(product) },
+                        onAddBulkToCart = { viewModel.addToCartBulk(product) },
+                        onPrintLabel = { 
+                            com.oqba26.hyperyar.util.LabelPdfHelper.generateAndShareLabel(context, product, shopName)
+                        },
+                        onToggleFavorite = { viewModel.toggleFavorite(product) },
                         onClick = { selectedProductForHistory = product }
                     )
                 }
@@ -415,6 +448,7 @@ fun DashboardSection(
     dueInstallmentsCount: Int,
     expiringCount: Int,
     isPurchaseMode: Boolean,
+    isAdmin: Boolean = true,
     onLowStockClick: () -> Unit,
     onExpiringClick: () -> Unit,
     onTogglePurchaseMode: () -> Unit
@@ -434,13 +468,15 @@ fun DashboardSection(
                 modifier = Modifier.weight(1.2f),
                 onClick = onTogglePurchaseMode
             )
-            DashboardCard(
-                label = "سود ماهانه",
-                value = monthlyProfit.toPersianPrice(),
-                icon = Icons.Default.AttachMoney,
-                color = Color(0xFF1976D2),
-                modifier = Modifier.weight(1.2f)
-            )
+            if (isAdmin) {
+                DashboardCard(
+                    label = "سود ماهانه",
+                    value = monthlyProfit.toPersianPrice(),
+                    icon = Icons.Default.AttachMoney,
+                    color = Color(0xFF1976D2),
+                    modifier = Modifier.weight(1.2f)
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -504,6 +540,27 @@ fun DashboardCard(
             Spacer(Modifier.height(4.dp))
             Text(label, style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = 0.8f))
             Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = color)
+        }
+    }
+}
+
+@Composable
+fun FavoriteProductChip(
+    product: Product,
+    onAddToCart: () -> Unit
+) {
+    Surface(
+        onClick = onAddToCart,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(product.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            Text(product.sellPrice.toPersianPrice(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

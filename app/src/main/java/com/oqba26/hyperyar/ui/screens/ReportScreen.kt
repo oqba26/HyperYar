@@ -30,6 +30,8 @@ fun ReportScreen(viewModel: ProductViewModel) {
     val totalProfit by viewModel.totalProfit.collectAsStateWithLifecycle()
     val monthlyProfit by viewModel.monthlyProfit.collectAsStateWithLifecycle()
     val topProducts by viewModel.topSellingProducts.collectAsStateWithLifecycle()
+    val profitByCategory by viewModel.profitByCategory.collectAsStateWithLifecycle()
+    val weeklyComparison by viewModel.weeklyComparison.collectAsStateWithLifecycle()
     val salesByHour by viewModel.salesByHour.collectAsStateWithLifecycle()
     val expenses by viewModel.allExpenses.collectAsStateWithLifecycle()
     val totalExpenses = expenses.sumOf { it.amount }
@@ -69,6 +71,57 @@ fun ReportScreen(viewModel: ProductViewModel) {
                     color = Color.Red,
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            // Weekly Comparison
+            val currentWeek = weeklyComparison.first
+            val previousWeek = weeklyComparison.second
+            val diff = currentWeek - previousWeek
+            val percent = if (previousWeek > 0) (diff / previousWeek) * 100 else 0.0
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("مقایسه هفتگی فروش", style = MaterialTheme.typography.labelMedium)
+                        Text(currentWeek.toPersianPrice(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = if (diff >= 0) "+${percent.toInt()}% رشد" else "${percent.toInt()}% کاهش",
+                            color = if (diff >= 0) Color(0xFF2E7D32) else Color.Red,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("نسبت به ۷ روز قبل", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                }
+            }
+
+            Text("سود خالص به تفکیک محصولات", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    if (profitByCategory.isEmpty()) {
+                        Text("داده‌ای موجود نیست")
+                    } else {
+                        profitByCategory.toList().sortedByDescending { it.second }.take(5).forEach { (name, profit) ->
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(name)
+                                Text(profit.toPersianPrice(), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                            }
+                        }
+                    }
+                }
             }
 
             Text("تحلیل فروش محصولات", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

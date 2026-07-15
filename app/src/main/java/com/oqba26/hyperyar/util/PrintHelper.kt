@@ -5,12 +5,15 @@ import android.content.Intent
 import com.oqba26.hyperyar.data.InvoiceWithItems
 
 object PrintHelper {
-    fun generateReceiptText(invoiceWithItems: InvoiceWithItems, shopName: String): String {
+    fun generateReceiptText(invoiceWithItems: InvoiceWithItems, shopName: String, customerName: String? = null): String {
         val sb = StringBuilder()
         sb.append("      $shopName      \n")
         sb.append("--------------------------------\n")
         sb.append("فاکتور شماره: ${invoiceWithItems.invoice.id}\n")
         sb.append("تاریخ: ${invoiceWithItems.invoice.timestamp.toPersianDateTimeString()}\n")
+        if (!customerName.isNullOrBlank()) {
+            sb.append("مشتری: $customerName\n")
+        }
         sb.append("--------------------------------\n")
         sb.append("نام کالا        تعداد    قیمت\n")
         

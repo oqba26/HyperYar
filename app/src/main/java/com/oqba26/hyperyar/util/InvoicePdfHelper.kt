@@ -19,7 +19,9 @@ object InvoicePdfHelper {
         invoiceWithItems: InvoiceWithItems,
         shopName: String = "",
         shopPhone: String = "",
-        shopAddress: String = ""
+        shopAddress: String = "",
+        customerName: String? = null,
+        customerPhone: String? = null
     ) {
         val pdfDocument = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 Size
@@ -57,6 +59,15 @@ object InvoicePdfHelper {
         canvas.drawText("شماره فاکتور: ${invoiceWithItems.invoice.id.toString().toPersianDigits()}", pageWidth - margin, currentY, textPaint)
         currentY += 20f
         canvas.drawText("تاریخ: ${invoiceWithItems.invoice.timestamp.toPersianDateTimeString()}", pageWidth - margin, currentY, textPaint)
+        
+        if (!customerName.isNullOrBlank()) {
+            currentY += 20f
+            canvas.drawText("مشتری: $customerName", pageWidth - margin, currentY, textPaint)
+            if (!customerPhone.isNullOrBlank()) {
+                currentY += 20f
+                canvas.drawText("تلفن: ${customerPhone.toPersianDigits()}", pageWidth - margin, currentY, textPaint)
+            }
+        }
         
         currentY += 40f
 

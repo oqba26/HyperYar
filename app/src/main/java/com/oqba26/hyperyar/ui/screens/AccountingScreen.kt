@@ -24,9 +24,11 @@ import com.oqba26.hyperyar.util.toPersianPrice
 @Composable
 fun AccountingScreen(
     viewModel: ProductViewModel,
+    isAdmin: Boolean = true,
     onNavigateToSuppliers: () -> Unit,
     onNavigateToCheques: () -> Unit,
-    onNavigateToExpenses: () -> Unit
+    onNavigateToExpenses: () -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val expenses by viewModel.allExpenses.collectAsStateWithLifecycle()
     val invoices by viewModel.allInvoices.collectAsStateWithLifecycle()
@@ -81,27 +83,29 @@ fun AccountingScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Summary Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("خلاصه وضعیت مالی", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        SummaryItem("درآمد (دریافتی)", totalIncome.toPersianPrice(), Color(0xFF2E7D32))
-                        SummaryItem("هزینه‌های جاری", totalExpenses.toPersianPrice(), MaterialTheme.colorScheme.error)
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("مانده صندوق (سود):", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            balance.toPersianPrice(),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (balance >= 0.0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
-                        )
+            if (isAdmin) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("خلاصه وضعیت مالی", style = MaterialTheme.typography.labelMedium)
+                        Spacer(Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            SummaryItem("درآمد (دریافتی)", totalIncome.toPersianPrice(), Color(0xFF2E7D32))
+                            SummaryItem("هزینه‌های جاری", totalExpenses.toPersianPrice(), MaterialTheme.colorScheme.error)
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("مانده صندوق (سود):", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                balance.toPersianPrice(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (balance >= 0.0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -116,23 +120,38 @@ fun AccountingScreen(
                     onClick = onNavigateToSuppliers,
                     modifier = Modifier.weight(1f)
                 )
-                AccountingNavCard(
-                    title = "دفتر چک",
-                    count = cheques.size,
-                    icon = Icons.Default.Payments,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    onClick = onNavigateToCheques,
-                    modifier = Modifier.weight(1f)
-                )
-                AccountingNavCard(
-                    title = "هزینه‌ها",
-                    count = expenses.size,
-                    icon = Icons.Default.Receipt,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    onClick = onNavigateToExpenses,
-                    modifier = Modifier.weight(1f)
-                )
+
+                if (isAdmin) {
+                    AccountingNavCard(
+                        title = "دفتر چک",
+                        count = cheques.size,
+                        icon = Icons.Default.Payments,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        onClick = onNavigateToCheques,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                if (isAdmin) {
+                    AccountingNavCard(
+                        title = "هزینه‌ها",
+                        count = expenses.size,
+                        icon = Icons.Default.Receipt,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        onClick = onNavigateToExpenses,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
+
+            AccountingNavCard(
+                title = "تاریخچه فاکتورها",
+                count = invoices.size,
+                icon = Icons.Default.History,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                onClick = onNavigateToHistory,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(Modifier.height(8.dp))
             HorizontalDivider()

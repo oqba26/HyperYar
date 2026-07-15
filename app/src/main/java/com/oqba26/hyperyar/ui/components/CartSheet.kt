@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,11 +33,12 @@ fun CartSheetContent(
     onPersonSelected: (Int?) -> Unit,
     onRemove: (CartItem) -> Unit,
     onRedeemPoints: (Int) -> Double,
-    onCheckout: (Double, Double, Long?, List<Pair<Double, Long?>>?) -> Unit
+    onCheckout: (Double, Double, String?, String?, Long?, List<Pair<Double, Long?>>?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedName by remember { mutableStateOf(if (isPurchaseMode) "انتخاب تامین‌کننده" else "انتخاب مشتری") }
     var selectedPersonId by remember { mutableStateOf<Int?>(null) }
+    var manualCustomerName by remember { mutableStateOf("") }
+    var manualCustomerPhone by remember { mutableStateOf("") }
     var pointsDiscount by remember { mutableDoubleStateOf(0.0) }
     
     var amountPaidText by remember { mutableStateOf("") }
@@ -50,7 +50,7 @@ fun CartSheetContent(
     val discountValue = (totalDiscountText.cleanNumber().toDoubleOrNull() ?: 0.0) + pointsDiscount
     val finalAmount = (totalAmount - discountValue).coerceAtLeast(0.0)
     val remainingDebt = finalAmount - (amountPaidText.cleanNumber().toDoubleOrNull() ?: 0.0)
-    val isDebt = remainingDebt > 0 && selectedPersonId != null
+    val isDebt = remainingDebt > 0 && (selectedPersonId != null || manualCustomerName.isNotBlank())
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -69,41 +69,87 @@ fun CartSheetContent(
                     color = if (isPurchaseMode) Color(0xFFE91E63) else MaterialTheme.colorScheme.primary
                 )
                 
-                // Person Selector
-                Box {
-                    AssistChip(
-                        onClick = { expanded = true },
-                        label = { Text(selectedName) },
-                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(20.dp), tint = Color.Gray) }
-                    )
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        if (isPurchaseMode) {
-                            suppliers.forEach { s ->
-                                DropdownMenuItem(text = { Text(s.name) }, onClick = {
-                                    onPersonSelected(s.id)
-                                    selectedPersonId = s.id
-                                    selectedName = s.name
-                                    expanded = false
-                                })
+                // Person Selector (Smart Selection)
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it },
+                    modifier = Modifier.weight(1f).padding(start = 8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = manualCustomerName,
+                        onValueChange = { input ->
+                            manualCustomerName = input
+                            val matchId: Int?
+                            val matchPhone: String?
+                            if (isPurchaseMode) {
+                                val match = suppliers.find { it.name == input }
+                                matchId = match?.id
+                                matchPhone = match?.phone
+                            } else {
+                                val match = customers.find { it.name == input }
+                                matchId = match?.id
+                                matchPhone = match?.phone
                             }
-                        } else {
-                            customers.forEach { c ->
-                                DropdownMenuItem(text = { Text(c.name) }, onClick = {
-                                    onPersonSelected(c.id)
-                                    selectedPersonId = c.id
-                                    selectedName = c.name
-                                    expanded = false
-                                })
+                            selectedPersonId = matchId
+                            if (matchPhone != null) manualCustomerPhone = matchPhone
+                            onPersonSelected(matchId)
+                            expanded = true
+                        },
+                        label = { Text(if (isPurchaseMode) "نام تامین‌کننده" else "نام مشتری / فروش آزاد") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+
+                    val filteredItems = if (isPurchaseMode) {
+                        suppliers.filter { it.name.contains(manualCustomerName, ignoreCase = true) }
+                    } else {
+                        customers.filter { it.name.contains(manualCustomerName, ignoreCase = true) }
+                    }
+
+                    if (filteredItems.isNotEmpty()) {
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            filteredItems.forEach { item ->
+                                val name = if (item is Customer) item.name else (item as Supplier).name
+                                val phoneStr = if (item is Customer) item.phone else (item as Supplier).phone
+                                val id = if (item is Customer) item.id else (item as Supplier).id
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(name)
+                                            if (phoneStr.isNotBlank()) {
+                                                Text(phoneStr.toPersianDigits(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        manualCustomerName = name
+                                        manualCustomerPhone = phoneStr
+                                        selectedPersonId = id
+                                        onPersonSelected(id)
+                                        expanded = false
+                                    }
+                                )
                             }
                         }
-                        DropdownMenuItem(text = { Text("بدون نام") }, onClick = {
-                            onPersonSelected(null)
-                            selectedPersonId = null
-                            selectedName = "بدون نام"
-                            expanded = false
-                        })
                     }
                 }
+            }
+
+            if (manualCustomerName.isNotBlank() || selectedPersonId != null) {
+                OutlinedTextField(
+                    value = manualCustomerPhone.toPersianDigits(),
+                    onValueChange = { manualCustomerPhone = it.cleanNumber() },
+                    label = { Text("شماره تماس") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
             }
 
             if (!isPurchaseMode && selectedPersonId != null) {
@@ -220,7 +266,7 @@ fun CartSheetContent(
                         onClick = { 
                             val manualDiscount = totalDiscountText.cleanNumber().toDoubleOrNull() ?: 0.0
                             val paid = amountPaidText.cleanNumber().toDoubleOrNull() ?: finalAmount
-                            onCheckout(paid, manualDiscount + pointsDiscount, dueDate, installments.ifEmpty { null }) 
+                            onCheckout(paid, manualDiscount + pointsDiscount, manualCustomerName, manualCustomerPhone, dueDate, installments.ifEmpty { null }) 
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -248,31 +294,50 @@ fun InstallmentSection(
     var showInstallmentDialog by remember { mutableStateOf(false) }
     var showDatePickerForIndex by remember { mutableStateOf<Int?>(null) } // -1 for main dueDate, >=0 for installments
 
-    Column(modifier = Modifier.padding(top = 12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("مدیریت اقساط", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            TextButton(onClick = { showInstallmentDialog = true }) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("افزودن قسط")
+    // هوشمندسازی موعد نهایی تسویه بر اساس آخرین قسط
+    LaunchedEffect(installments) {
+        if (installments.isNotEmpty()) {
+            val lastDate = installments.mapNotNull { it.second }.maxOrNull()
+            if (lastDate != null) {
+                onDueDateChange(lastDate)
             }
         }
+    }
 
-        Card(
+    Column(modifier = Modifier.padding(top = 12.dp)) {
+        Text(
+            text = "مدیریت پرداخت و اقساط",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Button(
+            onClick = { showInstallmentDialog = true },
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            onClick = { showDatePickerForIndex = -1 }
+            shape = MaterialTheme.shapes.medium,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("افزودن قسط")
+        }
+
+        // فقط اگر قسطی نباشد، انتخاب دستی موعد نهایی نمایش داده می‌شود
+        if (installments.isEmpty()) {
+            Button(
+                onClick = { showDatePickerForIndex = -1 },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
             ) {
-                Column {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("موعد نهایی تسویه", style = MaterialTheme.typography.labelSmall)
                     Text(
                         text = dueDate?.toPersianDateString() ?: "انتخاب تاریخ",
@@ -280,10 +345,10 @@ fun InstallmentSection(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
             }
         }
 
+        // Installments List
         installments.forEachIndexed { index, pair ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -326,8 +391,7 @@ fun InstallmentSection(
             )
         }
 
-        if (showDatePickerForIndex != null) {
-            val index = showDatePickerForIndex!!
+        showDatePickerForIndex?.let { index ->
             ShamsiDatePicker(
                 initialTimestamp = if (index == -1) dueDate else installments.getOrNull(index)?.second,
                 onDismiss = { showDatePickerForIndex = null },
@@ -396,7 +460,16 @@ fun AddInstallmentDialog(
                         },
                         modifier = Modifier.weight(1f)
                     ) { Text("تایید") }
-                    Button(onClick = onDismiss, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("انصراف") }
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text("انصراف")
+                    }
                 }
             }
         }

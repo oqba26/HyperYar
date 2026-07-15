@@ -22,6 +22,7 @@ import com.oqba26.hyperyar.util.toPersianDigits
 fun AppBottomBar(
     currentScreen: String = "products",
     cartItemCount: Int = 0,
+    isAdmin: Boolean = true,
     onNavigate: (String) -> Unit,
     onShowCart: () -> Unit
 ) {
@@ -50,12 +51,14 @@ fun AppBottomBar(
                 onClick = { onNavigate("customers") }
             )
 
-            RowNavigationItem(
-                icon = Icons.Default.BarChart,
-                label = "گزارشات",
-                selected = currentScreen == "reports",
-                onClick = { onNavigate("reports") }
-            )
+            if (isAdmin) {
+                RowNavigationItem(
+                    icon = Icons.Default.BarChart,
+                    label = "گزارشات",
+                    selected = currentScreen == "reports",
+                    onClick = { onNavigate("reports") }
+                )
+            }
 
             RowNavigationItem(
                 icon = Icons.Default.AccountBalanceWallet,

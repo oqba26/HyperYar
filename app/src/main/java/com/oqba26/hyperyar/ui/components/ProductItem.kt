@@ -2,10 +2,7 @@ package com.oqba26.hyperyar.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddShoppingCart
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,9 +20,15 @@ import com.oqba26.hyperyar.util.toPersianPrice
 @Composable
 fun ProductItem(
     product: Product,
+    isPurchaseMode: Boolean = false,
+    isAdmin: Boolean = true,
+    shopName: String = "",
     onDelete: () -> Unit,
     onEdit: () -> Unit,
     onAddToCart: () -> Unit,
+    onAddBulkToCart: () -> Unit = {},
+    onPrintLabel: () -> Unit = {},
+    onToggleFavorite: () -> Unit = {},
     onWaste: () -> Unit,
     onClick: () -> Unit = {}
 ) {
@@ -52,11 +55,22 @@ fun ProductItem(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = "موجودی: ${product.stock.toPersianNumber()} ${product.unit}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (product.stock > 10) Color.Gray else Color.Red
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "موجودی: ${product.stock.toPersianNumber()} ${product.unit}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (product.stock > 10) Color.Gray else Color.Red
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                imageVector = if (product.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = "Favorite",
+                                tint = if (product.isFavorite) Color(0xFFFFB300) else Color.Gray,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = product.sellPrice.toPersianPrice(),
@@ -68,7 +82,11 @@ fun ProductItem(
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onAddToCart) {
-                        Icon(Icons.Default.AddShoppingCart, contentDescription = "Add", tint = MaterialTheme.colorScheme.secondary)
+                        Icon(
+                            imageVector = if (isPurchaseMode) Icons.Default.AddBusiness else Icons.Default.AddShoppingCart,
+                            contentDescription = "Add",
+                            tint = if (isPurchaseMode) Color(0xFFE91E63) else MaterialTheme.colorScheme.secondary
+                        )
                     }
                     
                     Box {
@@ -76,12 +94,33 @@ fun ProductItem(
                             Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray)
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            if (isPurchaseMode && product.unitsInPack > 1) {
+                                DropdownMenuItem(
+                                    text = { Text("افزودن عمده (${product.unitsInPack.toPersianNumber()} عدد)") },
+                                    leadingIcon = { Icon(Icons.Default.Inventory, null, tint = Color(0xFFE91E63)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onAddBulkToCart()
+                                    }
+                                )
+                                HorizontalDivider()
+                            }
+                            if (isAdmin) {
+                                DropdownMenuItem(
+                                    text = { Text("ویرایش") },
+                                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                    onClick = {
+                                        showMenu = false
+                                        onEdit()
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text("ویرایش") },
-                                leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                text = { Text("چاپ لیبل قیمت") },
+                                leadingIcon = { Icon(Icons.Default.Print, null) },
                                 onClick = {
                                     showMenu = false
-                                    onEdit()
+                                    onPrintLabel()
                                 }
                             )
                             DropdownMenuItem(
@@ -92,15 +131,17 @@ fun ProductItem(
                                     onWaste()
                                 }
                             )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("حذف کالا", color = Color.Red) },
-                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) },
-                                onClick = {
-                                    showMenu = false
-                                    onDelete()
-                                }
-                            )
+                            if (isAdmin) {
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("حذف کالا", color = Color.Red) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) },
+                                    onClick = {
+                                        showMenu = false
+                                        onDelete()
+                                    }
+                                )
+                            }
                         }
                     }
                 }

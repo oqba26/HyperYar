@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class InvoiceType {
-    SALE, PURCHASE
+    SALE, PURCHASE, RETURN_SALE, RETURN_PURCHASE
 }
 
 @Serializable

@@ -21,6 +21,7 @@ import com.oqba26.hyperyar.data.*
 import com.oqba26.hyperyar.ui.components.AppBottomBar
 import com.oqba26.hyperyar.ui.components.ConfirmDialog
 import com.oqba26.hyperyar.ui.screens.*
+import com.oqba26.hyperyar.ui.screens.HistoryScreen
 import com.oqba26.hyperyar.ui.theme.*
 import com.oqba26.hyperyar.util.SupabaseManager
 import com.oqba26.hyperyar.ui.components.CartSheetContent
@@ -188,6 +189,8 @@ class MainActivity : ComponentActivity() {
                             val isPurchaseMode by viewModel.isPurchaseMode.collectAsStateWithLifecycle()
                             val customers by viewModel.allCustomers.collectAsStateWithLifecycle()
                             val suppliers by viewModel.allSuppliers.collectAsStateWithLifecycle()
+                            val userRole by settingsManager.userRole.collectAsState(initial = "ADMIN")
+                            val isAdmin = userRole == "ADMIN"
 
                             var selectedPersonId by remember { mutableStateOf<Int?>(null) }
                             var currentScreen by remember { mutableStateOf("products") }
@@ -235,7 +238,7 @@ class MainActivity : ComponentActivity() {
                                         onPersonSelected = { selectedPersonId = it },
                                         onRemove = { viewModel.removeFromCart(it) },
                                         onRedeemPoints = { viewModel.redeemPoints(it) }
-                                    ) { paid, discount, dueDate, installments ->
+                                    ) { paid, discount, custName, custPhone, dueDate, installments ->
                                         val total = cartItems.sumOf { it.totalPrice }
                                         val type = if (isPurchaseMode) InvoiceType.PURCHASE else InvoiceType.SALE
                                         
@@ -263,8 +266,14 @@ class MainActivity : ComponentActivity() {
                                         val invoiceWithItems = InvoiceWithItems(invoice, items)
                                         
                                         if (type == InvoiceType.SALE) {
-                                            InvoicePdfHelper.generateAndShareInvoice(context, invoiceWithItems, displayTitle)
-                                            val receipt = PrintHelper.generateReceiptText(invoiceWithItems, displayTitle)
+                                            InvoicePdfHelper.generateAndShareInvoice(
+                                                context = context, 
+                                                invoiceWithItems = invoiceWithItems, 
+                                                shopName = displayTitle,
+                                                customerName = custName,
+                                                customerPhone = custPhone
+                                            )
+                                            val receipt = PrintHelper.generateReceiptText(invoiceWithItems, displayTitle, custName)
                                             PrintHelper.sendToPrinter(context, receipt)
                                         }
 
@@ -288,6 +297,7 @@ class MainActivity : ComponentActivity() {
                                     AppBottomBar(
                                         currentScreen = currentScreen,
                                         cartItemCount = cartItems.size,
+                                        isAdmin = isAdmin,
                                         onNavigate = { currentScreen = it },
                                         onShowCart = { showCartSheet = true }
                                     )
@@ -299,14 +309,16 @@ class MainActivity : ComponentActivity() {
                                         .padding(bottom = innerPadding.calculateBottomPadding())
                                 ) {
                                     when (currentScreen) {
-                                        "products" -> ProductScreen(viewModel = viewModel)
+                                        "products" -> ProductScreen(viewModel = viewModel, isAdmin = isAdmin)
                                         "customers" -> CustomerScreen(viewModel = viewModel)
-                                        "accounting" -> AccountingScreen(
-                                            viewModel = viewModel,
-                                            onNavigateToSuppliers = { currentScreen = "suppliers" },
-                                            onNavigateToCheques = { currentScreen = "cheques" },
-                                            onNavigateToExpenses = { currentScreen = "expenses" }
-                                        )
+                                            "accounting" -> AccountingScreen(
+                                                viewModel = viewModel,
+                                                isAdmin = isAdmin,
+                                                onNavigateToSuppliers = { currentScreen = "suppliers" },
+                                                onNavigateToCheques = { currentScreen = "cheques" },
+                                                onNavigateToExpenses = { currentScreen = "expenses" },
+                                                onNavigateToHistory = { currentScreen = "history" }
+                                            )
                                         "reports" -> ReportScreen(viewModel = viewModel)
                                         "settings" -> SettingsScreen(
                                             viewModel = viewModel,
@@ -321,6 +333,7 @@ class MainActivity : ComponentActivity() {
                                         "suppliers" -> SupplierScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
                                         "cheques" -> ChequeScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
                                         "expenses" -> ExpenseScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
+                                        "history" -> HistoryScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
                                     }
                                     
                                     if (isSyncing) {

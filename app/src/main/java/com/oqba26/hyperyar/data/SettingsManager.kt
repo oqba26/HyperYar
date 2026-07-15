@@ -24,6 +24,7 @@ class SettingsManager(private val context: Context) {
         val SHOP_ADDRESS = stringPreferencesKey("shop_address")
         val SHOP_TAX_ID = stringPreferencesKey("shop_tax_id")
         val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        val USER_ROLE = stringPreferencesKey("user_role") // ADMIN or STAFF
     }
 
     val selectedFont: Flow<String> = context.dataStore.data.map { preferences ->
@@ -66,6 +67,10 @@ class SettingsManager(private val context: Context) {
         preferences[SHOP_TAX_ID] ?: ""
     }
 
+    val userRole: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[USER_ROLE] ?: "ADMIN"
+    }
+
     suspend fun saveFont(fontName: String) {
         context.dataStore.edit { preferences ->
             preferences[SELECTED_FONT] = fontName
@@ -87,6 +92,12 @@ class SettingsManager(private val context: Context) {
     suspend fun setLoggedIn(loggedIn: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_LOGGED_IN] = loggedIn
+        }
+    }
+
+    suspend fun saveUserRole(role: String) {
+        context.dataStore.edit { preferences ->
+            preferences[USER_ROLE] = role
         }
     }
 

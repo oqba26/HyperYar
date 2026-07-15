@@ -39,6 +39,7 @@ import com.oqba26.hyperyar.util.toPersianNumber
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductDialog(
+    isAdmin: Boolean = true,
     onDismiss: () -> Unit,
     onConfirm: (Product) -> Unit
 ) {
@@ -47,9 +48,11 @@ fun AddProductDialog(
     var sellPrice by remember { mutableStateOf("") }
     var buyPrice by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
+    var unitsInPack by remember { mutableStateOf("1") }
     var unit by remember { mutableStateOf("عدد") }
     var category by remember { mutableStateOf("عمومی") }
-    var expanded by remember { mutableStateOf(false) }
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var unitExpanded by remember { mutableStateOf(false) }
     
     // پرچم‌هایی برای تشخیص تغییر دستی توسط کاربر
     var isUnitManuallySet by remember { mutableStateOf(false) }
@@ -145,15 +148,17 @@ fun AddProductDialog(
                             singleLine = true
                         )
 
-                        OutlinedTextField(
-                            value = buyPrice,
-                            onValueChange = { buyPrice = it },
-                            label = { Text("قیمت خرید") },
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            visualTransformation = PersianNumberVisualTransformation(),
-                            singleLine = true
-                        )
+                        if (isAdmin) {
+                            OutlinedTextField(
+                                value = buyPrice,
+                                onValueChange = { buyPrice = it },
+                                label = { Text("قیمت خرید") },
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                visualTransformation = PersianNumberVisualTransformation(),
+                                singleLine = true
+                            )
+                        }
 
                         OutlinedTextField(
                             value = stock,
@@ -166,19 +171,51 @@ fun AddProductDialog(
                         )
 
                         OutlinedTextField(
-                            value = unit,
-                            onValueChange = { 
-                                unit = it
-                                isUnitManuallySet = true
-                            },
-                            label = { Text("واحد") },
+                            value = unitsInPack,
+                            onValueChange = { unitsInPack = it },
+                            label = { Text("تعداد در بسته (برای خرید عمده)") },
                             modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = PersianNumberVisualTransformation(),
                             singleLine = true
                         )
 
                         ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
+                            expanded = unitExpanded,
+                            onExpandedChange = { unitExpanded = !unitExpanded }
+                        ) {
+                            OutlinedTextField(
+                                value = unit,
+                                onValueChange = { 
+                                    unit = it
+                                    isUnitManuallySet = true
+                                },
+                                label = { Text("واحد") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded) },
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth(),
+                                singleLine = true
+                            )
+                            ExposedDropdownMenu(
+                                expanded = unitExpanded,
+                                onDismissRequest = { unitExpanded = false }
+                            ) {
+                                CategorizationHelper.defaultUnits.forEach { selectionOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(selectionOption) },
+                                        onClick = {
+                                            unit = selectionOption
+                                            isUnitManuallySet = true
+                                            unitExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        ExposedDropdownMenuBox(
+                            expanded = categoryExpanded,
+                            onExpandedChange = { categoryExpanded = !categoryExpanded }
                         ) {
                             OutlinedTextField(
                                 value = category,
@@ -187,13 +224,13 @@ fun AddProductDialog(
                                     isCategoryManuallySet = true
                                 },
                                 label = { Text("دسته‌بندی") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth()
                             )
                             ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
+                                expanded = categoryExpanded,
+                                onDismissRequest = { categoryExpanded = false }
                             ) {
                                 CategorizationHelper.defaultCategories.forEach { selectionOption ->
                                     DropdownMenuItem(
@@ -201,7 +238,7 @@ fun AddProductDialog(
                                         onClick = {
                                             category = selectionOption
                                             isCategoryManuallySet = true
-                                            expanded = false
+                                            categoryExpanded = false
                                         }
                                     )
                                 }
@@ -225,6 +262,7 @@ fun AddProductDialog(
                                             sellPrice = sellPrice.cleanNumber().toDoubleOrNull() ?: 0.0,
                                             buyPrice = buyPrice.cleanNumber().toDoubleOrNull() ?: 0.0,
                                             stock = stock.cleanNumber().toDoubleOrNull() ?: 0.0,
+                                            unitsInPack = unitsInPack.cleanNumber().toDoubleOrNull() ?: 1.0,
                                             unit = unit,
                                             category = category
                                         )
@@ -260,6 +298,7 @@ fun AddProductDialog(
 @Composable
 fun EditProductDialog(
     product: Product,
+    isAdmin: Boolean = true,
     onDismiss: () -> Unit,
     onConfirm: (Product) -> Unit
 ) {
@@ -268,9 +307,11 @@ fun EditProductDialog(
     var sellPrice by remember { mutableStateOf(product.sellPrice.toString()) }
     var buyPrice by remember { mutableStateOf(product.buyPrice.toString()) }
     var stock by remember { mutableStateOf(product.stock.toString()) }
+    var unitsInPack by remember { mutableStateOf(product.unitsInPack.toString()) }
     var unit by remember { mutableStateOf(product.unit) }
     var category by remember { mutableStateOf(product.category) }
-    var expanded by remember { mutableStateOf(false) }
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var unitExpanded by remember { mutableStateOf(false) }
     
     var isUnitManuallySet by remember { mutableStateOf(false) }
     var isCategoryManuallySet by remember { mutableStateOf(false) }
@@ -365,15 +406,17 @@ fun EditProductDialog(
                             singleLine = true
                         )
 
-                        OutlinedTextField(
-                            value = buyPrice,
-                            onValueChange = { buyPrice = it },
-                            label = { Text("قیمت خرید") },
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            visualTransformation = PersianNumberVisualTransformation(),
-                            singleLine = true
-                        )
+                        if (isAdmin) {
+                            OutlinedTextField(
+                                value = buyPrice,
+                                onValueChange = { buyPrice = it },
+                                label = { Text("قیمت خرید") },
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                visualTransformation = PersianNumberVisualTransformation(),
+                                singleLine = true
+                            )
+                        }
 
                         OutlinedTextField(
                             value = stock,
@@ -386,19 +429,51 @@ fun EditProductDialog(
                         )
 
                         OutlinedTextField(
-                            value = unit,
-                            onValueChange = { 
-                                unit = it
-                                isUnitManuallySet = true
-                            },
-                            label = { Text("واحد") },
+                            value = unitsInPack,
+                            onValueChange = { unitsInPack = it },
+                            label = { Text("تعداد در بسته (برای خرید عمده)") },
                             modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = PersianNumberVisualTransformation(),
                             singleLine = true
                         )
 
                         ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
+                            expanded = unitExpanded,
+                            onExpandedChange = { unitExpanded = !unitExpanded }
+                        ) {
+                            OutlinedTextField(
+                                value = unit,
+                                onValueChange = { 
+                                    unit = it
+                                    isUnitManuallySet = true
+                                },
+                                label = { Text("واحد") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded) },
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth(),
+                                singleLine = true
+                            )
+                            ExposedDropdownMenu(
+                                expanded = unitExpanded,
+                                onDismissRequest = { unitExpanded = false }
+                            ) {
+                                CategorizationHelper.defaultUnits.forEach { selectionOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(selectionOption) },
+                                        onClick = {
+                                            unit = selectionOption
+                                            isUnitManuallySet = true
+                                            unitExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        ExposedDropdownMenuBox(
+                            expanded = categoryExpanded,
+                            onExpandedChange = { categoryExpanded = !categoryExpanded }
                         ) {
                             OutlinedTextField(
                                 value = category,
@@ -407,13 +482,13 @@ fun EditProductDialog(
                                     isCategoryManuallySet = true
                                 },
                                 label = { Text("دسته‌بندی") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth()
                             )
                             ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
+                                expanded = categoryExpanded,
+                                onDismissRequest = { categoryExpanded = false }
                             ) {
                                 CategorizationHelper.defaultCategories.forEach { selectionOption ->
                                     DropdownMenuItem(
@@ -421,7 +496,7 @@ fun EditProductDialog(
                                         onClick = {
                                             category = selectionOption
                                             isCategoryManuallySet = true
-                                            expanded = false
+                                            categoryExpanded = false
                                         }
                                     )
                                 }
@@ -445,6 +520,7 @@ fun EditProductDialog(
                                             sellPrice = sellPrice.cleanNumber().toDoubleOrNull() ?: 0.0,
                                             buyPrice = buyPrice.cleanNumber().toDoubleOrNull() ?: 0.0,
                                             stock = stock.cleanNumber().toDoubleOrNull() ?: 0.0,
+                                            unitsInPack = unitsInPack.cleanNumber().toDoubleOrNull() ?: 1.0,
                                             unit = unit,
                                             category = category,
                                             isSynced = false // Reset sync status on update

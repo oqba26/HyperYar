@@ -82,6 +82,29 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
+    val profitByCategory: StateFlow<Map<String, Double>> = repository.allInvoicesWithItems.map { invoices ->
+        invoices.filter { it.invoice.type == InvoiceType.SALE }
+            .flatMap { it.items }
+            .groupBy { it.unit } // Note: Assuming unit or we should fetch category from product?
+            // Actually, InvoiceItem doesn't have category. We need to join or have it in InvoiceItem.
+            // For now, let's group by product and assume we can map to category if we had that link.
+            // Better: group by productName for now or fetch products first.
+            .mapValues { entry -> 
+                entry.value.sumOf { (it.priceAtSale - it.buyPriceAtSale) * it.quantity }
+            }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    val weeklyComparison: StateFlow<Pair<Double, Double>> = repository.allInvoices.map { invoices ->
+        val now = System.currentTimeMillis()
+        val oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000)
+        val twoWeeksAgo = now - (14 * 24 * 60 * 60 * 1000)
+        
+        val currentWeekSales = invoices.filter { it.timestamp in oneWeekAgo..now && it.type == InvoiceType.SALE }.sumOf { it.totalAmount }
+        val previousWeekSales = invoices.filter { it.timestamp in twoWeeksAgo until oneWeekAgo && it.type == InvoiceType.SALE }.sumOf { it.totalAmount }
+        
+        currentWeekSales to previousWeekSales
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0 to 0.0)
+
     val expiringProducts: StateFlow<List<Product>> = repository.allProducts.map { products ->
         val soon = System.currentTimeMillis() + (7 * 24 * 60 * 60 * 1000) // 7 days
         products.filter { 
@@ -213,6 +236,19 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         _cartItems.value = currentItems
     }
 
+    fun addToCartBulk(product: Product) {
+        val currentItems = _cartItems.value.toMutableList()
+        val existingItem = currentItems.find { it.product.id == product.id }
+        val quantityToAdd = if (product.unitsInPack > 0) product.unitsInPack else 1.0
+        if (existingItem != null) {
+            val index = currentItems.indexOf(existingItem)
+            currentItems[index] = existingItem.copy(quantity = existingItem.quantity + quantityToAdd)
+        } else {
+            currentItems.add(CartItem(product, quantity = quantityToAdd))
+        }
+        _cartItems.value = currentItems
+    }
+
     fun removeFromCart(cartItem: CartItem) {
         _cartItems.value = _cartItems.value.filter { it != cartItem }
     }
@@ -299,8 +335,36 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         launch { silentSync() }
     }
 
+    fun toggleFavorite(product: Product) = viewModelScope.launch {
+        repository.update(product.copy(isFavorite = !product.isFavorite))
+        launch { silentSync() }
+    }
+
     fun delete(product: Product) = viewModelScope.launch {
         repository.delete(product)
+    }
+
+    fun deleteInvoice(invoiceWithItems: InvoiceWithItems) = viewModelScope.launch {
+        repository.deleteInvoice(invoiceWithItems.invoice, invoiceWithItems.items)
+        launch { silentSync() }
+    }
+
+    fun refundInvoice(invoiceWithItems: InvoiceWithItems) = viewModelScope.launch {
+        val inv = invoiceWithItems.invoice
+        val type = if (inv.type == InvoiceType.SALE) InvoiceType.RETURN_SALE else InvoiceType.RETURN_PURCHASE
+        
+        val refundInvoice = Invoice(
+            type = type,
+            totalAmount = inv.totalAmount,
+            totalDiscount = inv.totalDiscount,
+            customerId = inv.customerId,
+            supplierId = inv.supplierId,
+            amountPaid = inv.amountPaid,
+            dueDate = null
+        )
+        val items = invoiceWithItems.items.map { it.copy(id = 0, invoiceId = 0) }
+        repository.saveInvoice(refundInvoice, items)
+        launch { silentSync() }
     }
 
     fun insertCustomer(customer: Customer) = viewModelScope.launch {

@@ -16,6 +16,8 @@ data class Product(
     val sellPrice: Double = 0.0,
     val stock: Double = 0.0,
     val unit: String = "pcs",
+    val unitsInPack: Double = 1.0, // New field for bulk to individual conversion
+    val isFavorite: Boolean = false, // New field for quick access
     val expiryDate: String? = null,
     val description: String = "",
     val lastUpdated: Long = System.currentTimeMillis(),
