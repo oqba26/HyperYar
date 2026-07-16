@@ -2,7 +2,6 @@ package com.oqba26.hyperyar
 
 import android.os.Bundle
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import android.os.Build
@@ -12,6 +11,7 @@ import android.os.Environment
 import java.io.File
 import androidx.core.net.toUri
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -38,7 +37,6 @@ import com.oqba26.hyperyar.ui.screens.HistoryScreen
 import com.oqba26.hyperyar.ui.theme.*
 import com.oqba26.hyperyar.util.SupabaseManager
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.status.SessionStatus
 import com.oqba26.hyperyar.ui.components.CartSheetContent
 import com.oqba26.hyperyar.util.InvoicePdfHelper
 import com.oqba26.hyperyar.util.PrintHelper
@@ -49,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -75,6 +74,10 @@ class MainActivity : ComponentActivity() {
         ProductViewModelFactory(repository)
     }
 
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        SettingsViewModelFactory(SettingsManager(this))
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,7 +98,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         setContent {
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
@@ -359,7 +364,7 @@ class MainActivity : ComponentActivity() {
                                 val syncEnabledVal = settingsManager.isSyncEnabled.first()
                                 if (client != null && syncEnabledVal) {
                                     client.auth.sessionStatus.collect { status ->
-                                        if (status is io.github.jan.supabase.auth.status.SessionStatus.NotAuthenticated) {
+                                        if (status is SessionStatus.NotAuthenticated) {
                                             showSessionExpiredDialog = true
                                         }
                                     }
@@ -606,48 +611,48 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             ) { innerPadding ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(bottom = innerPadding.calculateBottomPadding())
-                                ) {
+                                val bottomPadding = innerPadding.calculateBottomPadding()
+                                
+                                Box(modifier = Modifier.fillMaxSize()) {
                                     when (currentScreen) {
-                                        "products" -> ProductScreen(viewModel = viewModel, isAdmin = isAdmin)
-                                        "customers" -> CustomerScreen(viewModel = viewModel)
-                                            "accounting" -> AccountingScreen(
-                                                viewModel = viewModel,
-                                                isAdmin = isAdmin,
-                                                onNavigateToSuppliers = { currentScreen = "suppliers" },
-                                                onNavigateToCheques = { currentScreen = "cheques" },
-                                                onNavigateToExpenses = { currentScreen = "expenses" },
-                                                onNavigateToHistory = { currentScreen = "history" }
-                                            )
-                                        "reports" -> ReportScreen(viewModel = viewModel)
+                                        "products" -> ProductScreen(viewModel = viewModel, isAdmin = isAdmin, bottomPadding = bottomPadding)
+                                        "customers" -> CustomerScreen(viewModel = viewModel, bottomPadding = bottomPadding)
+                                        "accounting" -> AccountingScreen(
+                                            viewModel = viewModel,
+                                            bottomPadding = bottomPadding,
+                                            isAdmin = isAdmin,
+                                            onNavigateToSuppliers = { currentScreen = "suppliers" },
+                                            onNavigateToCheques = { currentScreen = "cheques" },
+                                            onNavigateToExpenses = { currentScreen = "expenses" },
+                                            onNavigateToHistory = { currentScreen = "history" }
+                                        )
+                                        "reports" -> ReportScreen(viewModel = viewModel, bottomPadding = bottomPadding)
                                         "settings" -> SettingsScreen(
                                             viewModel = viewModel,
-                                            settingsManager = settingsManager,
+                                            settingsViewModel = settingsViewModel,
+                                            bottomPadding = bottomPadding,
                                             onNavigateBack = { currentScreen = "products" },
                                             onLogout = { 
                                                 scope.launch {
-                                                    settingsManager.setLoggedIn(loggedIn = false)
+                                                    settingsViewModel.setLoggedIn(loggedIn = false)
                                                 }
                                             }
                                         )
-                                        "suppliers" -> SupplierScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
-                                        "cheques" -> ChequeScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
-                                        "expenses" -> ExpenseScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
-                                        "history" -> HistoryScreen(viewModel = viewModel, onNavigateBack = { currentScreen = "accounting" })
+                                        "suppliers" -> SupplierScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
+                                        "cheques" -> ChequeScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
+                                        "expenses" -> ExpenseScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
+                                        "history" -> HistoryScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
                                     }
-                                    
-                                    if (isSyncing) {
-                                        LinearProgressIndicator(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .align(androidx.compose.ui.Alignment.TopCenter)
-                                                .height(2.dp),
-                                            color = MaterialTheme.colorScheme.tertiary
-                                        )
-                                    }
+                                }
+                                
+                                if (isSyncing) {
+                                    LinearProgressIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(2.dp)
+                                            .padding(top = innerPadding.calculateTopPadding()),
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
                                 }
                             }
                         }

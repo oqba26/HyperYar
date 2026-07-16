@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.ui.components.AddChequeDialog
@@ -24,7 +25,11 @@ import com.oqba26.hyperyar.util.toPersianPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChequeScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
+fun ChequeScreen(
+    viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp,
+    onNavigateBack: () -> Unit
+) {
     val cheques by viewModel.allCheques.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -39,6 +44,7 @@ fun ChequeScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text("مدیریت چک‌ها") },
@@ -62,11 +68,11 @@ fun ChequeScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
         }
     ) { innerPadding ->
         if (cheques.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding()).padding(bottom = bottomPadding), contentAlignment = Alignment.Center) {
                 Text("هنوز چکی ثبت نشده است")
             }
         } else {
-            LazyColumn(modifier = Modifier.padding(innerPadding).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(modifier = Modifier.padding(top = innerPadding.calculateTopPadding()).padding(bottom = bottomPadding).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(cheques) { cheque ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),

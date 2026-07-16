@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.InvoiceType
 import com.oqba26.hyperyar.data.InvoiceWithItems
@@ -31,7 +32,11 @@ import com.oqba26.hyperyar.util.toPersianPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
+fun HistoryScreen(
+    viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp,
+    onNavigateBack: () -> Unit
+) {
     val context = LocalContext.current
     val invoices by viewModel.allInvoicesWithItems.collectAsStateWithLifecycle()
     val settingsManager = remember { com.oqba26.hyperyar.data.SettingsManager(context) }
@@ -45,6 +50,7 @@ fun HistoryScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
     var actionType by remember { mutableStateOf("") } // "delete" or "refund"
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text("تاریخچه فاکتورها") },
@@ -61,7 +67,7 @@ fun HistoryScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        Column(modifier = Modifier.padding(top = innerPadding.calculateTopPadding()).padding(bottom = bottomPadding).fillMaxSize()) {
             if (invoices.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("هنوز هیچ فاکتوری ثبت نشده است.")

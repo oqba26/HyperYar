@@ -18,8 +18,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.ProductViewModel
-import com.oqba26.hyperyar.data.SettingsManager
+import com.oqba26.hyperyar.data.SettingsViewModel
 import com.oqba26.hyperyar.util.SupabaseManager
 import com.oqba26.hyperyar.util.cleanNumber
 import com.oqba26.hyperyar.util.toPersianDigits
@@ -30,26 +32,37 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     viewModel: ProductViewModel,
-    settingsManager: SettingsManager,
+    settingsViewModel: SettingsViewModel,
+    bottomPadding: Dp = 0.dp,
     onNavigateBack: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val context = LocalContext.current
-    val selectedFont by settingsManager.selectedFont.collectAsState(initial = "Vazirmatn")
-    val selectedTheme by settingsManager.selectedTheme.collectAsState(initial = "Purple")
-    val isSyncEnabled by settingsManager.isSyncEnabled.collectAsState(initial = true)
-    val userRole by settingsManager.userRole.collectAsState(initial = "ADMIN")
-    val shopNamePersistent by settingsManager.shopName.collectAsState(initial = "")
-    val shopPhonePersistent by settingsManager.shopPhone.collectAsState(initial = "")
-    val shopAddressPersistent by settingsManager.shopAddress.collectAsState(initial = "")
-    val shopTaxIdPersistent by settingsManager.shopTaxId.collectAsState(initial = "")
+    val selectedFont by settingsViewModel.selectedFont.collectAsStateWithLifecycle()
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsStateWithLifecycle()
+    val isSyncEnabled by settingsViewModel.isSyncEnabled.collectAsStateWithLifecycle()
+    val userRole by settingsViewModel.userRole.collectAsStateWithLifecycle()
+    val shopNamePersistent by settingsViewModel.shopName.collectAsStateWithLifecycle()
+    val shopPhonePersistent by settingsViewModel.shopPhone.collectAsStateWithLifecycle()
+    val shopAddressPersistent by settingsViewModel.shopAddress.collectAsStateWithLifecycle()
+    val shopTaxIdPersistent by settingsViewModel.shopTaxId.collectAsStateWithLifecycle()
 
     var localShopName by remember(shopNamePersistent) { mutableStateOf(shopNamePersistent) }
     var localShopPhone by remember(shopPhonePersistent) { mutableStateOf(shopPhonePersistent) }
     var localShopAddress by remember(shopAddressPersistent) { mutableStateOf(shopAddressPersistent) }
     var localShopTaxId by remember(shopTaxIdPersistent) { mutableStateOf(shopTaxIdPersistent) }
 
-    var isShopSettingsExpanded by remember { mutableStateOf(shopNamePersistent.isBlank()) }
+    var isShopSettingsExpanded by remember { mutableStateOf(false) }
+    var hasInitializedExpansion by remember { mutableStateOf(false) }
+
+    LaunchedEffect(shopNamePersistent) {
+        if (!hasInitializedExpansion) {
+            if (shopNamePersistent.isBlank() || shopNamePersistent == "هایپر من") {
+                isShopSettingsExpanded = true
+            }
+            hasInitializedExpansion = true
+        }
+    }
 
     val scope = rememberCoroutineScope()
     var fontExpanded by remember { mutableStateOf(value = false) }
@@ -81,10 +94,11 @@ fun SettingsScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
                 .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .padding(bottom = bottomPadding)
                 .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -170,15 +184,13 @@ fun SettingsScreen(
 
                 Button(
                     onClick = {
-                        scope.launch {
-                            settingsManager.saveShopInfo(
-                                localShopName,
-                                localShopPhone,
-                                localShopAddress,
-                                localShopTaxId
-                            )
-                            isShopSettingsExpanded = false
-                        }
+                        settingsViewModel.saveShopInfo(
+                            localShopName,
+                            localShopPhone,
+                            localShopAddress,
+                            localShopTaxId
+                        )
+                        isShopSettingsExpanded = false
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium
@@ -227,10 +239,8 @@ fun SettingsScreen(
                         DropdownMenuItem(
                             text = { Text(text = font) },
                             onClick = {
-                                scope.launch {
-                                    settingsManager.saveFont(font)
-                                    fontExpanded = false
-                                }
+                                settingsViewModel.saveFont(font)
+                                fontExpanded = false
                             }
                         )
                     }
@@ -280,10 +290,8 @@ fun SettingsScreen(
                                 )
                             },
                             onClick = {
-                                scope.launch {
-                                    settingsManager.saveTheme(theme)
-                                    themeExpanded = false
-                                }
+                                settingsViewModel.saveTheme(theme)
+                                themeExpanded = false
                             }
                         )
                     }
@@ -314,10 +322,8 @@ fun SettingsScreen(
                     )
                 }
                 TextButton(onClick = {
-                    scope.launch {
-                        val newRole = if (userRole == "ADMIN") "STAFF" else "ADMIN"
-                        settingsManager.saveUserRole(newRole)
-                    }
+                    val newRole = if (userRole == "ADMIN") "STAFF" else "ADMIN"
+                    settingsViewModel.saveUserRole(newRole)
                 }) {
                     Text(if (userRole == "ADMIN") "تغییر به صندوق‌دار" else "تغییر به مدیر")
                 }
@@ -335,7 +341,7 @@ fun SettingsScreen(
             )
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -349,9 +355,7 @@ fun SettingsScreen(
                 Switch(
                     checked = isSyncEnabled,
                     onCheckedChange = { 
-                        scope.launch {
-                            settingsManager.setSyncEnabled(it)
-                        }
+                        settingsViewModel.setSyncEnabled(it)
                     }
                 )
             }

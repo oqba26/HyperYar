@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.Product
@@ -40,6 +41,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProductScreen(
     viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp,
     isAdmin: Boolean = true
 ) {
     val products by viewModel.allProducts.collectAsStateWithLifecycle()
@@ -320,7 +322,11 @@ fun ProductScreen(
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .padding(top = innerPadding.calculateTopPadding())
+                .padding(bottom = bottomPadding)
+        ) {
             DashboardSection(
                 todaySales = todaySales,
                 monthlyProfit = monthlyProfit,

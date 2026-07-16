@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.ui.components.SimpleBarChart
@@ -25,7 +26,10 @@ import com.oqba26.hyperyar.util.toPersianPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportScreen(viewModel: ProductViewModel) {
+fun ReportScreen(
+    viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp
+) {
     val totalSales by viewModel.todayTotalSales.collectAsStateWithLifecycle()
     val totalProfit by viewModel.totalProfit.collectAsStateWithLifecycle()
     val monthlyProfit by viewModel.monthlyProfit.collectAsStateWithLifecycle()
@@ -37,6 +41,7 @@ fun ReportScreen(viewModel: ProductViewModel) {
     val totalExpenses = expenses.sumOf { it.amount }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text("گزارشات و آمار") },
@@ -49,10 +54,11 @@ fun ReportScreen(viewModel: ProductViewModel) {
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .padding(top = innerPadding.calculateTopPadding())
+                .padding(bottom = bottomPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Summary Cards

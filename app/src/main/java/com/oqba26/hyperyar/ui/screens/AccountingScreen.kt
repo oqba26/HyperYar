@@ -18,12 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.util.toPersianDigits
+import androidx.compose.ui.unit.Dp
 import com.oqba26.hyperyar.util.toPersianPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountingScreen(
     viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp,
     isAdmin: Boolean = true,
     onNavigateToSuppliers: () -> Unit,
     onNavigateToCheques: () -> Unit,
@@ -50,6 +52,7 @@ fun AccountingScreen(
     val balance = totalIncome - totalExpenses
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = { 
             TopAppBar(
                 title = { Text("حسابداری و مالی", style = MaterialTheme.typography.titleMedium) },
@@ -77,8 +80,10 @@ fun AccountingScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .padding(bottom = bottomPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

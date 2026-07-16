@@ -33,6 +33,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+
     signingConfigs {
         create("release") {
             val storeFileProp = getProp("RELEASE_STORE_FILE")

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.Supplier
+import androidx.compose.ui.unit.Dp
 import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.ui.components.AddSupplierDialog
 import com.oqba26.hyperyar.ui.components.SupplierDetailDialog
@@ -22,7 +23,11 @@ import com.oqba26.hyperyar.util.toPersianDigits
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SupplierScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
+fun SupplierScreen(
+    viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp,
+    onNavigateBack: () -> Unit
+) {
     val suppliers by viewModel.allSuppliers.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var selectedSupplierForDetail by remember { mutableStateOf<Supplier?>(null) }
@@ -53,6 +58,7 @@ fun SupplierScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text("تامین‌کنندگان") },
@@ -76,11 +82,17 @@ fun SupplierScreen(viewModel: ProductViewModel, onNavigateBack: () -> Unit) {
         }
     ) { innerPadding ->
         if (suppliers.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(bottom = bottomPadding),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("هنوز تامین‌کننده‌ای ثبت نشده است")
             }
         } else {
-            LazyColumn(modifier = Modifier.padding(innerPadding).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(modifier = Modifier.padding(top = innerPadding.calculateTopPadding()).padding(bottom = bottomPadding).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(suppliers) { supplier ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),

@@ -18,12 +18,16 @@ import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.ui.components.AddCustomerDialog
 import com.oqba26.hyperyar.ui.components.EditCustomerDialog
 import com.oqba26.hyperyar.ui.components.CustomerDetailDialog
+import androidx.compose.ui.unit.Dp
 import com.oqba26.hyperyar.util.toPersianDigits
 import com.oqba26.hyperyar.util.toPersianPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerScreen(viewModel: ProductViewModel) {
+fun CustomerScreen(
+    viewModel: ProductViewModel,
+    bottomPadding: Dp = 0.dp
+) {
     val customers by viewModel.allCustomers.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var customerToEdit by remember { mutableStateOf<Customer?>(null) }
@@ -89,6 +93,7 @@ fun CustomerScreen(viewModel: ProductViewModel) {
     }
     
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text("مشتریان") },
@@ -125,14 +130,21 @@ fun CustomerScreen(viewModel: ProductViewModel) {
         }
     ) { innerPadding ->
         if (customers.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(bottom = bottomPadding),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("هنوز مشتری ثبت نشده است")
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(bottom = bottomPadding)
                     .padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
