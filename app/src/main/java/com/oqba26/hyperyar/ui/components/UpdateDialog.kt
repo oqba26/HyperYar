@@ -22,55 +22,31 @@ fun UpdateDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    Dialog(
+    HyperDialog(
         onDismissRequest = { if (!updateInfo.isForceUpdate) onDismiss() },
-        properties = DialogProperties(
-            dismissOnBackPress = !updateInfo.isForceUpdate,
-            dismissOnClickOutside = !updateInfo.isForceUpdate
-        )
-    ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Text(
-                    text = "به‌روزرسانی جدید موجود است",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
+        title = "به‌روزرسانی جدید موجود است",
+        content = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     text = "نسخه ${updateInfo.versionName}",
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.Gray
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = "تغییرات این نسخه:",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                
+
                 Text(
                     text = updateInfo.releaseNotes,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
-                
+
                 if (updateInfo.isForceUpdate) {
                     Text(
                         text = "نصب این به‌روزرسانی برای ادامه استفاده از برنامه الزامی است.",
@@ -79,34 +55,31 @@ fun UpdateDialog(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("تایید و بروزرسانی", style = MaterialTheme.typography.labelLarge)
+            }
+        },
+        dismissButton = if (!updateInfo.isForceUpdate) {
+            {
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 ) {
-                    Button(
-                        onClick = onConfirm,
-                        modifier = Modifier.weight(1f),
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text("تایید و بروزرسانی")
-                    }
-                    
-                    if (!updateInfo.isForceUpdate) {
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text("بعداً")
-                        }
-                    }
+                    Text("بعداً", style = MaterialTheme.typography.labelLarge)
                 }
             }
-        }
-    }
-}
+        } else null
+    )
 }

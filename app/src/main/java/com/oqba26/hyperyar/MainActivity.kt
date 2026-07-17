@@ -32,6 +32,7 @@ import android.app.Activity
 import com.oqba26.hyperyar.data.*
 import com.oqba26.hyperyar.ui.components.AppBottomBar
 import com.oqba26.hyperyar.ui.components.ConfirmDialog
+import com.oqba26.hyperyar.ui.components.HyperDialog
 import com.oqba26.hyperyar.ui.screens.*
 import com.oqba26.hyperyar.ui.screens.HistoryScreen
 import com.oqba26.hyperyar.ui.theme.*
@@ -181,7 +182,21 @@ class MainActivity : ComponentActivity() {
                 }
 
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    val isLoggedIn by settingsManager.isLoggedIn.collectAsState(initial = null)
+                    val isLoggedIn by settingsViewModel.isLoggedIn.collectAsState(initial = null)
+                    val isLocalLoggedIn by settingsViewModel.isLocalLoggedIn.collectAsState(initial = null)
+                    val allUsers by viewModel.allUsers.collectAsStateWithLifecycle()
+                    val isSyncing by viewModel.isSyncing.collectAsState()
+                    var hasCheckedInitialUsers by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(allUsers, isSyncing) {
+                        // Wait until we have users OR sync is finished
+                        if (!isSyncing || allUsers.isNotEmpty()) {
+                            if (allUsers.isEmpty() && !hasCheckedInitialUsers) {
+                                viewModel.insertUser(User(username = "admin", passwordHash = "admin", role = "ADMIN"))
+                            }
+                            hasCheckedInitialUsers = true
+                        }
+                    }
                     
                     updateInfo?.let { info ->
                         UpdateDialog(
@@ -206,140 +221,99 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (isDownloading) {
-                        Dialog(onDismissRequest = { }) {
-                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.extraLarge,
-                                    tonalElevation = 6.dp,
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                        HyperDialog(
+                            onDismissRequest = { },
+                            title = "در حال دریافت به‌روزرسانی",
+                            content = {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(24.dp),
-                                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "در حال دریافت به‌روزرسانی",
-                                            style = MaterialTheme.typography.titleLarge,
-                                            modifier = Modifier.padding(bottom = 16.dp)
-                                        )
-                                        LinearProgressIndicator(
-                                            progress = { downloadProgress },
-                                            modifier = Modifier.fillMaxWidth().height(8.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "${(downloadProgress * 100).toInt()}%",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
+                                    LinearProgressIndicator(
+                                        progress = { downloadProgress },
+                                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    @Suppress("SpellCheckingInspection")
+                                    Text(
+                                        text = "${(downloadProgress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                 }
                             }
-                        }
+                        )
                     }
 
                     if (showCleanupDialog) {
-                        Dialog(
+                        HyperDialog(
                             onDismissRequest = {
                                 showCleanupDialog = false
                                 showForcedExitDialog = true
                             },
-                        ) {
-                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.extraLarge,
-                                    tonalElevation = 6.dp,
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                ) {
-                                    Column(modifier = Modifier.padding(24.dp)) {
-                                        Text(
-                                            text = "دسترسی مدیریت فایل‌ها",
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            modifier = Modifier.padding(bottom = 16.dp),
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                        Text(
-                                            text = "برای انجام عملیات پشتیبان‌گیری، بازگردانی اطلاعات و مدیریت فایل‌های نصب، برنامه به دسترسی «مدیریت تمامی فایل‌ها» نیاز دارد.\n\nبدون این دسترسی، امکان ذخیره اطلاعات شما وجود نخواهد داشت. لطفاً در صفحه بعد این دسترسی را فعال کنید.",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Spacer(modifier = Modifier.height(24.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Button(
-                                                onClick = {
-                                                    showCleanupDialog = false
-                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                                                        intent.data = "package:${context.packageName}".toUri()
-                                                        context.startActivity(intent)
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f).height(48.dp),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.primary
-                                                )
-                                            ) {
-                                                Text("تنظیمات", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
-                                            }
-                                            Button(
-                                                onClick = {
-                                                    showCleanupDialog = false
-                                                    showForcedExitDialog = true
-                                                },
-                                                modifier = Modifier.weight(1f).height(48.dp),
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                                ),
-                                                shape = MaterialTheme.shapes.medium
-                                            ) {
-                                                Text("خروج", style = MaterialTheme.typography.labelLarge)
-                                            }
+                            title = "دسترسی مدیریت فایل‌ها",
+                            content = {
+                                Text(
+                                    text = "برای انجام عملیات پشتیبان‌گیری، بازگردانی اطلاعات و مدیریت فایل‌های نصب، برنامه به دسترسی «مدیریت تمامی فایل‌ها» نیاز دارد.\n\nبدون این دسترسی، امکان ذخیره اطلاعات شما وجود نخواهد داشت. لطفاً در صفحه بعد این دسترسی را فعال کنید.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        showCleanupDialog = false
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                                            intent.data = "package:${context.packageName}".toUri()
+                                            context.startActivity(intent)
                                         }
-                                    }
+                                    },
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = MaterialTheme.shapes.medium
+                                ) {
+                                    Text("تنظیمات", style = MaterialTheme.typography.labelLarge)
+                                }
+                            },
+                            dismissButton = {
+                                Button(
+                                    onClick = {
+                                        showCleanupDialog = false
+                                        showForcedExitDialog = true
+                                    },
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    ),
+                                    shape = MaterialTheme.shapes.medium
+                                ) {
+                                    Text("خروج", style = MaterialTheme.typography.labelLarge)
                                 }
                             }
-                        }
+                        )
                     }
 
                     if (showForcedExitDialog) {
-                        Dialog(onDismissRequest = { (context as? Activity)?.finish() }) {
-                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.extraLarge,
-                                    tonalElevation = 6.dp,
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        HyperDialog(
+                            onDismissRequest = { (context as? Activity)?.finish() },
+                            title = "عدم دسترسی",
+                            content = {
+                                Text(
+                                    text = "متاسفانه شما دسترسی لازم رو به برنامه نداده اید و برنامه بسته خواهد شد.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = { (context as? Activity)?.finish() },
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = MaterialTheme.shapes.medium
                                 ) {
-                                    Column(modifier = Modifier.padding(24.dp)) {
-                                        Text(
-                                            text = "عدم دسترسی",
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            modifier = Modifier.padding(bottom = 16.dp)
-                                        )
-                                        @Suppress("SpellCheckingInspection")
-                                        Text(
-                                            text = "متاسفانه شما دسترسی لازم رو به برنامه نداده اید و برنامه بسته خواهد شد.",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Spacer(modifier = Modifier.height(24.dp))
-                                        Button(
-                                            onClick = { (context as? Activity)?.finish() },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = MaterialTheme.shapes.small,
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary
-                                            )
-                                        ) {
-                                            Text("تایید و خروج", color = MaterialTheme.colorScheme.onPrimary)
-                                        }
-                                    }
+                                    Text("تایید و خروج", style = MaterialTheme.typography.labelLarge)
                                 }
                             }
-                        }
+                        )
                     }
 
                     when (isLoggedIn) {
@@ -353,306 +327,318 @@ class MainActivity : ComponentActivity() {
                         false -> {
                             LoginScreen {
                                 scope.launch {
-                                    settingsManager.setLoggedIn(loggedIn = true)
+                                    settingsViewModel.setLoggedIn(loggedIn = true)
                                     viewModel.syncWithSupabase()
                                 }
                             }
                         }
                         else -> {
-                            LaunchedEffect(Unit) {
-                                val client = SupabaseManager.getClient()
-                                val syncEnabledVal = settingsManager.isSyncEnabled.first()
-                                if (client != null && syncEnabledVal) {
-                                    client.auth.sessionStatus.collect { status ->
-                                        if (status is SessionStatus.NotAuthenticated) {
-                                            showSessionExpiredDialog = true
+                            if (isLocalLoggedIn == false) {
+                                LocalLoginScreen(
+                                    users = allUsers,
+                                    isSyncing = isSyncing,
+                                    onLoginSuccess = { user ->
+                                        settingsViewModel.setLocalLoggedIn(true, user.username)
+                                        settingsViewModel.saveUserRole(user.role)
+                                    }
+                                )
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    val client = SupabaseManager.getClient()
+                                    val syncEnabledVal = settingsManager.isSyncEnabled.first()
+                                    if (client != null && syncEnabledVal) {
+                                        client.auth.sessionStatus.collect { status ->
+                                            if (status is SessionStatus.NotAuthenticated) {
+                                                showSessionExpiredDialog = true
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            val isSyncing by viewModel.isSyncing.collectAsState()
-                            val cartItems by viewModel.cartItems.collectAsStateWithLifecycle()
-                            val isPurchaseMode by viewModel.isPurchaseMode.collectAsStateWithLifecycle()
-                            val customers by viewModel.allCustomers.collectAsStateWithLifecycle()
-                            val suppliers by viewModel.allSuppliers.collectAsStateWithLifecycle()
-                            val userRole by settingsManager.userRole.collectAsState(initial = "ADMIN")
-                            val isAdmin = userRole == "ADMIN"
+                                val isSyncing by viewModel.isSyncing.collectAsState()
+                                val cartItems by viewModel.cartItems.collectAsStateWithLifecycle()
+                                val isPurchaseMode by viewModel.isPurchaseMode.collectAsStateWithLifecycle()
+                                val customers by viewModel.allCustomers.collectAsStateWithLifecycle()
+                                val suppliers by viewModel.allSuppliers.collectAsStateWithLifecycle()
+                                val userRole by settingsManager.userRole.collectAsState(initial = "ADMIN")
+                                val isAdmin = userRole == "ADMIN"
 
-                            var selectedPersonId by remember { mutableStateOf<Int?>(null) }
-                            var currentScreen by remember { mutableStateOf("products") }
-                            var showCartSheet by remember { mutableStateOf(value = false) }
-                            var showExitDialog by remember { mutableStateOf(value = false) }
+                                val loyaltyEnabled by settingsManager.loyaltyEnabled.collectAsState(initial = true)
+                                val loyaltyRate by settingsManager.loyaltyRate.collectAsState(initial = "10000")
+                                val loyaltyValue by settingsManager.loyaltyValue.collectAsState(initial = "1000")
+                                val printerType by settingsManager.printerType.collectAsState(initial = "SHARE")
+                                val printerAddress by settingsManager.printerAddress.collectAsState(initial = "")
 
-                            var hasCheckedPermissionsThisSession by remember { mutableStateOf(value = false) }
+                                val selectedCustomerId by viewModel.selectedCustomerId.collectAsStateWithLifecycle()
+                                val selectedSupplierId by viewModel.selectedSupplierId.collectAsStateWithLifecycle()
 
-                            LaunchedEffect(currentScreen, showSessionExpiredDialog) {
-                                val isMainAppScreen = currentScreen != "login"
+                                var currentScreen by remember { mutableStateOf("products") }
+                                var showCartSheet by remember { mutableStateOf(value = false) }
+                                var showExitDialog by remember { mutableStateOf(value = false) }
 
-                                if (isMainAppScreen && !showSessionExpiredDialog && !hasCheckedPermissionsThisSession) {
-                                    val allGranted = requiredPermissions.all {
-                                        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                var hasCheckedPermissionsThisSession by remember { mutableStateOf(value = false) }
+
+                                LaunchedEffect(currentScreen, showSessionExpiredDialog) {
+                                    val isMainAppScreen = currentScreen != "login"
+
+                                    if (isMainAppScreen && !showSessionExpiredDialog && !hasCheckedPermissionsThisSession) {
+                                        val allGranted = requiredPermissions.all {
+                                            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                        }
+                                        if (!allGranted) {
+                                            showPermissionsDialog = true
+                                        }
+                                        hasCheckedPermissionsThisSession = true
                                     }
-                                    if (!allGranted) {
-                                        showPermissionsDialog = true
-                                    }
-                                    hasCheckedPermissionsThisSession = true
-                                }
 
-                                if ((currentScreen == "products") && !isCleanupChecked && !showSessionExpiredDialog) {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                        if (!Environment.isExternalStorageManager()) {
-                                            showCleanupDialog = true
+                                    if ((currentScreen == "products") && !isCleanupChecked && !showSessionExpiredDialog) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            if (!Environment.isExternalStorageManager()) {
+                                                showCleanupDialog = true
+                                            } else {
+                                                cleanupInstaller()
+                                            }
                                         } else {
                                             cleanupInstaller()
                                         }
+                                        isCleanupChecked = true
+                                    }
+                                }
+
+                                val sheetState = rememberModalBottomSheetState()
+                                val shopName by settingsManager.shopName.collectAsState(initial = "")
+                                val displayTitle = remember(shopName) {
+                                    if (shopName.isBlank() || shopName == "هایپر من") "هایپرمارکت" 
+                                    else "هایپرمارکت $shopName"
+                                }
+
+                                BackHandler {
+                                    if (currentScreen != "products") {
+                                        currentScreen = "products"
                                     } else {
-                                        cleanupInstaller()
+                                        showExitDialog = true
                                     }
-                                    isCleanupChecked = true
                                 }
-                            }
 
-                            val sheetState = rememberModalBottomSheetState()
-                            val shopName by settingsManager.shopName.collectAsState(initial = "")
-                            val displayTitle = remember(shopName) {
-                                if (shopName.isBlank() || shopName == "هایپر من") "هایپرمارکت" 
-                                else "هایپرمارکت $shopName"
-                            }
-
-                            BackHandler {
-                                if (currentScreen != "products") {
-                                    currentScreen = "products"
-                                } else {
-                                    showExitDialog = true
+                                if (showExitDialog) {
+                                    ConfirmDialog(
+                                        title = "خروج از برنامه",
+                                        message = "آیا می‌خواهید از اپلیکیشن خارج شوید؟",
+                                        confirmText = "تایید",
+                                        cancelText = "لغو",
+                                        onConfirm = {
+                                            (context as? Activity)?.finish()
+                                        },
+                                        onDismiss = { showExitDialog = false },
+                                        isDanger = true
+                                    )
                                 }
-                            }
 
-                            if (showExitDialog) {
-                                ConfirmDialog(
-                                    title = "خروج از برنامه",
-                                    message = "آیا می‌خواهید از اپلیکیشن خارج شوید؟",
-                                    confirmText = "تایید",
-                                    cancelText = "لغو",
-                                    onConfirm = {
-                                        (context as? Activity)?.finish()
-                                    },
-                                    onDismiss = { showExitDialog = false },
-                                    isDanger = true
-                                )
-                            }
-
-                            if (showPermissionsDialog) {
-                                Dialog(onDismissRequest = { }) {
-                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                        Surface(
-                                            shape = MaterialTheme.shapes.extraLarge,
-                                            tonalElevation = 6.dp,
-                                            modifier = Modifier.fillMaxWidth().padding(16.dp)
-                                        ) {
+                                if (showPermissionsDialog) {
+                                    HyperDialog(
+                                        onDismissRequest = { },
+                                        title = "دسترسی‌های الزامی",
+                                        content = {
                                             @Suppress("SpellCheckingInspection")
-                                            Column(modifier = Modifier.padding(24.dp)) {
-                                                Text(
-                                                    text = "دسترسی‌های الزامی",
-                                                    style = MaterialTheme.typography.headlineSmall,
-                                                    modifier = Modifier.padding(bottom = 16.dp),
-                                                    color = MaterialTheme.colorScheme.error
+                                            Text(
+                                                text = "کاربر گرامی، برای استفاده از برنامه باید دسترسی‌های زیر را تایید کنید:\n\n" +
+                                                        "۱. مخاطبین: برای پیدا کردن خودکار شماره مشتری\n" +
+                                                        "۲. دوربین: برای اسکن بارکد کالاها\n" +
+                                                        "۳. حافظه: برای ذخیره فاکتورها و فایل‌های پشتیبان\n\n" +
+                                                        "توجه: در صورت عدم تایید، برنامه به هیچ عنوان کار نخواهد کرد و بسته خواهد شد.",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        },
+                                        confirmButton = {
+                                            Button(
+                                                onClick = {
+                                                    permissionLauncher.launch(requiredPermissions)
+                                                },
+                                                modifier = Modifier.weight(1f).height(48.dp),
+                                                shape = MaterialTheme.shapes.medium
+                                            ) {
+                                                Text("اعطای دسترسی", style = MaterialTheme.typography.labelLarge)
+                                            }
+                                        },
+                                        dismissButton = {
+                                            Button(
+                                                onClick = { (context as? Activity)?.finish() },
+                                                modifier = Modifier.weight(1f).height(48.dp),
+                                                shape = MaterialTheme.shapes.medium,
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
                                                 )
-                                                Text(
-                                                    text = "کاربر گرامی، برای استفاده از برنامه باید دسترسی‌های زیر را تایید کنید:\n\n" +
-                                                            "۱. مخاطبین: برای پیدا کردن خودکار شماره مشتری\n" +
-                                                            "۲. دوربین: برای اسکن بارکد کالاها\n" +
-                                                            "۳. حافظه: برای ذخیره فاکتورها و فایل‌های پشتیبان\n\n" +
-                                                            "توجه: در صورت عدم تایید، برنامه به هیچ عنوان کار نخواهد کرد و بسته خواهد شد.",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Spacer(modifier = Modifier.height(24.dp))
-                                                Button(
-                                                    onClick = {
-                                                        permissionLauncher.launch(requiredPermissions)
-                                                    },
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    shape = MaterialTheme.shapes.small,
-                                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                                                ) {
-                                                    Text("متوجه شدم؛ اعطای دسترسی", color = MaterialTheme.colorScheme.onPrimary)
-                                                }
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                @Suppress("SpellCheckingInspection")
-                                                TextButton(
-                                                    onClick = { (context as? Activity)?.finish() },
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Text("خروج", color = MaterialTheme.colorScheme.error)
-                                                }
+                                            ) {
+                                                Text("خروج", style = MaterialTheme.typography.labelLarge)
                                             }
                                         }
-                                    }
-                                }
-                            }
-
-                            if (showSessionExpiredDialog) {
-                                Dialog(onDismissRequest = { }) {
-                                    @Suppress("SpellCheckingInspection")
-                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                        Surface(
-                                            shape = MaterialTheme.shapes.extraLarge,
-                                            tonalElevation = 6.dp,
-                                            modifier = Modifier.fillMaxWidth().padding(16.dp)
-                                        ) {
-                                            Column(modifier = Modifier.padding(24.dp)) {
-                                                Text(
-                                                    text = "کاربر گرامی",
-                                                    style = MaterialTheme.typography.headlineSmall,
-                                                    modifier = Modifier.padding(bottom = 16.dp),
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                                Text(
-                                                    text = "زمان ورود قبلی شما به برنامه منقضی شده و باید مجدد وارد شوید. این کار فقط برای حفظ امنیت اطلاعات خودتان ضروری است.\n\nالان به صفحه ورود منتقل می‌شوید؛ لطفاً نام کاربری و کلمه عبوری که قبلاً با آن در برنامه ثبت‌نام کرده و وارد شده‌اید را مجدداً وارد نمایید. با تشکر",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Spacer(modifier = Modifier.height(24.dp))
-                                                Button(
-                                                    onClick = {
-                                                        showSessionExpiredDialog = false
-                                                        scope.launch {
-                                                            settingsManager.setLoggedIn(false)
-                                                        }
-                                                    },
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    shape = MaterialTheme.shapes.small,
-                                                    colors = ButtonDefaults.buttonColors(
-                                                        containerColor = MaterialTheme.colorScheme.primary
-                                                    )
-                                                ) {
-                                                    Text("متوجه شدم؛ ورود مجدد", color = MaterialTheme.colorScheme.onPrimary)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (showCartSheet) {
-                                ModalBottomSheet(
-                                    onDismissRequest = { showCartSheet = false },
-                                    sheetState = sheetState
-                                ) {
-                                    CartSheetContent(
-                                        cartItems = cartItems,
-                                        isPurchaseMode = isPurchaseMode,
-                                        customers = customers,
-                                        suppliers = suppliers,
-                                        onPersonSelected = { selectedPersonId = it },
-                                        onRemove = { viewModel.removeFromCart(it) },
-                                        onRedeemPoints = { viewModel.redeemPoints(it) }
-                                    ) { paid, discount, custName, custPhone, dueDate, installments ->
-                                        val total = cartItems.sumOf { it.totalPrice }
-                                        val type = if (isPurchaseMode) InvoiceType.PURCHASE else InvoiceType.SALE
-                                        
-                                        val invoice = Invoice(
-                                            totalAmount = total,
-                                            totalDiscount = discount,
-                                            type = type,
-                                            customerId = if (type == InvoiceType.SALE) selectedPersonId else null,
-                                            supplierId = if (type == InvoiceType.PURCHASE) selectedPersonId else null,
-                                            amountPaid = paid,
-                                            dueDate = dueDate
-                                        )
-                                        val items = cartItems.map { 
-                                            InvoiceItem(
-                                                productId = it.product.id,
-                                                productName = it.product.name,
-                                                quantity = it.quantity,
-                                                unit = it.product.unit,
-                                                priceAtSale = it.sellPrice,
-                                                buyPriceAtSale = it.product.buyPrice,
-                                                invoiceId = 0 
-                                            )
-                                        }
-                                        
-                                        val invoiceWithItems = InvoiceWithItems(invoice, items)
-                                        
-                                        if (type == InvoiceType.SALE) {
-                                            InvoicePdfHelper.generateAndShareInvoice(
-                                                context = context, 
-                                                invoiceWithItems = invoiceWithItems, 
-                                                shopName = displayTitle,
-                                                customerName = custName,
-                                                customerPhone = custPhone
-                                            )
-                                            val receipt = PrintHelper.generateReceiptText(invoiceWithItems, displayTitle, custName)
-                                            PrintHelper.sendToPrinter(context, receipt)
-                                        }
-
-                                        viewModel.checkout(
-                                            customerId = if (type == InvoiceType.SALE) selectedPersonId else null,
-                                            supplierId = if (type == InvoiceType.PURCHASE) selectedPersonId else null,
-                                            amountPaid = paid,
-                                            totalDiscount = discount,
-                                            dueDate = dueDate,
-                                            installments = installments
-                                        )
-                                        showCartSheet = false
-                                        selectedPersonId = null
-                                    }
-                                }
-                            }
-                            
-                            Scaffold(
-                                modifier = Modifier.fillMaxSize(),
-                                bottomBar = {
-                                    AppBottomBar(
-                                        currentScreen = currentScreen,
-                                        cartItemCount = cartItems.size,
-                                        isAdmin = isAdmin,
-                                        onNavigate = { currentScreen = it },
-                                        onShowCart = { showCartSheet = true }
                                     )
                                 }
-                            ) { innerPadding ->
-                                val bottomPadding = innerPadding.calculateBottomPadding()
+
+                                if (showSessionExpiredDialog) {
+                                    HyperDialog(
+                                        onDismissRequest = { },
+                                        title = "کاربر گرامی",
+                                        content = {
+                                            Text(
+                                                text = "زمان ورود قبلی شما به برنامه منقضی شده و باید مجدد وارد شوید. این کار فقط برای حفظ امنیت اطلاعات خودتان ضروری است.\n\nالان به صفحه ورود منتقل می‌شوید؛ لطفاً نام کاربری و کلمه عبوری که قبلاً با آن در برنامه ثبت‌نام کرده و وارد شده‌اید را مجدداً وارد نمایید. با تشکر",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        },
+                                        confirmButton = {
+                                            Button(
+                                                onClick = {
+                                                    showSessionExpiredDialog = false
+                                                    scope.launch {
+                                                        settingsManager.setLoggedIn(false)
+                                                    }
+                                                },
+                                                modifier = Modifier.weight(1f).height(48.dp),
+                                                shape = MaterialTheme.shapes.medium
+                                            ) {
+                                                Text("ورود مجدد", style = MaterialTheme.typography.labelLarge)
+                                            }
+                                        }
+                                    )
+                                }
+
+                                if (showCartSheet) {
+                                    ModalBottomSheet(
+                                        onDismissRequest = { showCartSheet = false },
+                                        sheetState = sheetState
+                                    ) {
+                                        CartSheetContent(
+                                            cartItems = cartItems,
+                                            isPurchaseMode = isPurchaseMode,
+                                            customers = customers,
+                                            suppliers = suppliers,
+                                            loyaltyRate = loyaltyRate.toDoubleOrNull() ?: 10000.0,
+                                            loyaltyValue = loyaltyValue.toDoubleOrNull() ?: 1000.0,
+                                            initialSelectedPersonId = if (isPurchaseMode) selectedSupplierId else selectedCustomerId,
+                                            onPersonSelected = { id ->
+                                                if (isPurchaseMode) viewModel.selectSupplierForCart(id)
+                                                else viewModel.selectCustomerForCart(id)
+                                            },
+                                            onRemove = { viewModel.removeFromCart(it) },
+                                            onRedeemPoints = { id, value -> viewModel.redeemPoints(id, value) }
+                                        ) { paid, discount, custName, custPhone, dueDate, installments ->
+                                            val total = cartItems.sumOf { it.totalPrice }
+                                            val type = if (isPurchaseMode) InvoiceType.PURCHASE else InvoiceType.SALE
+                                            
+                                            val invoice = Invoice(
+                                                totalAmount = total,
+                                                totalDiscount = discount,
+                                                type = type,
+                                                customerId = if (type == InvoiceType.SALE) selectedCustomerId else null,
+                                                supplierId = if (type == InvoiceType.PURCHASE) selectedSupplierId else null,
+                                                amountPaid = paid,
+                                                dueDate = dueDate
+                                            )
+                                            val items = cartItems.map { 
+                                                InvoiceItem(
+                                                    productId = it.product.id,
+                                                    productName = it.product.name,
+                                                    quantity = it.quantity,
+                                                    unit = it.product.unit,
+                                                    priceAtSale = it.sellPrice,
+                                                    buyPriceAtSale = it.product.buyPrice,
+                                                    invoiceId = 0 
+                                                )
+                                            }
+                                            
+                                            val invoiceWithItems = InvoiceWithItems(invoice, items)
+                                            
+                                            if (type == InvoiceType.SALE) {
+                                                InvoicePdfHelper.generateAndShareInvoice(
+                                                    context = context, 
+                                                    invoiceWithItems = invoiceWithItems, 
+                                                    shopName = displayTitle,
+                                                    customerName = custName,
+                                                    customerPhone = custPhone
+                                                )
+                                                val receipt = PrintHelper.generateReceiptText(invoiceWithItems, displayTitle, custName)
+                                                PrintHelper.sendToPrinter(context, receipt, printerType, printerAddress)
+                                            }
+
+                                            viewModel.checkout(
+                                                customerId = if (type == InvoiceType.SALE) selectedCustomerId else null,
+                                                supplierId = if (type == InvoiceType.PURCHASE) selectedSupplierId else null,
+                                                amountPaid = paid,
+                                                totalDiscount = discount,
+                                                dueDate = dueDate,
+                                                installments = installments,
+                                                loyaltyEnabled = loyaltyEnabled,
+                                                loyaltyRate = loyaltyRate.toDoubleOrNull() ?: 10000.0
+                                            )
+                                            showCartSheet = false
+                                            viewModel.selectCustomerForCart(null)
+                                        }
+                                    }
+                                }
                                 
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    when (currentScreen) {
-                                        "products" -> ProductScreen(viewModel = viewModel, isAdmin = isAdmin, bottomPadding = bottomPadding)
-                                        "customers" -> CustomerScreen(viewModel = viewModel, bottomPadding = bottomPadding)
-                                        "accounting" -> AccountingScreen(
-                                            viewModel = viewModel,
-                                            bottomPadding = bottomPadding,
+                                Scaffold(
+                                    modifier = Modifier.fillMaxSize(),
+                                    bottomBar = {
+                                        AppBottomBar(
+                                            currentScreen = currentScreen,
+                                            cartItemCount = cartItems.size,
                                             isAdmin = isAdmin,
-                                            onNavigateToSuppliers = { currentScreen = "suppliers" },
-                                            onNavigateToCheques = { currentScreen = "cheques" },
-                                            onNavigateToExpenses = { currentScreen = "expenses" },
-                                            onNavigateToHistory = { currentScreen = "history" }
+                                            onNavigate = { currentScreen = it },
+                                            onShowCart = { showCartSheet = true }
                                         )
-                                        "reports" -> ReportScreen(viewModel = viewModel, bottomPadding = bottomPadding)
-                                        "settings" -> SettingsScreen(
-                                            viewModel = viewModel,
-                                            settingsViewModel = settingsViewModel,
-                                            bottomPadding = bottomPadding,
-                                            onNavigateBack = { currentScreen = "products" },
-                                            onLogout = { 
-                                                scope.launch {
-                                                    settingsViewModel.setLoggedIn(loggedIn = false)
-                                                }
-                                            }
-                                        )
-                                        "suppliers" -> SupplierScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
-                                        "cheques" -> ChequeScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
-                                        "expenses" -> ExpenseScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
-                                        "history" -> HistoryScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
                                     }
-                                }
-                                
-                                if (isSyncing) {
-                                    LinearProgressIndicator(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(2.dp)
-                                            .padding(top = innerPadding.calculateTopPadding()),
-                                        color = MaterialTheme.colorScheme.tertiary
-                                    )
+                                ) { innerPadding ->
+                                    val bottomPadding = innerPadding.calculateBottomPadding()
+                                    
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        when (currentScreen) {
+                                            "products" -> ProductScreen(viewModel = viewModel, isAdmin = isAdmin, bottomPadding = bottomPadding)
+                                            "customers" -> CustomerScreen(
+                                                viewModel = viewModel, 
+                                                bottomPadding = bottomPadding,
+                                                onNavigateBack = { currentScreen = "products" }
+                                            )
+                                            "accounting" -> AccountingScreen(
+                                                viewModel = viewModel,
+                                                bottomPadding = bottomPadding,
+                                                isAdmin = isAdmin,
+                                                onNavigateToSuppliers = { currentScreen = "suppliers" },
+                                                onNavigateToCheques = { currentScreen = "cheques" },
+                                                onNavigateToExpenses = { currentScreen = "expenses" },
+                                                onNavigateToHistory = { currentScreen = "history" }
+                                            )
+                                            "settings" -> SettingsScreen(
+                                                viewModel = viewModel,
+                                                settingsViewModel = settingsViewModel,
+                                                bottomPadding = bottomPadding,
+                                                onNavigateBack = { currentScreen = "products" },
+                                                onLogout = { 
+                                                    scope.launch {
+                                                        settingsViewModel.setLoggedIn(loggedIn = false)
+                                                    }
+                                                }
+                                            )
+                                            "suppliers" -> SupplierScreen(
+                                                viewModel = viewModel, 
+                                                bottomPadding = bottomPadding, 
+                                                onNavigateBack = { currentScreen = "accounting" }
+                                            )
+                                            "cheques" -> ChequeScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
+                                            "expenses" -> ExpenseScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
+                                            "history" -> HistoryScreen(viewModel = viewModel, bottomPadding = bottomPadding, onNavigateBack = { currentScreen = "accounting" })
+                                        }
+                                    }
+                                    
+                                    if (isSyncing) {
+                                        LinearProgressIndicator(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(2.dp)
+                                                .padding(top = innerPadding.calculateTopPadding()),
+                                            color = MaterialTheme.colorScheme.tertiary
+                                        )
+                                    }
                                 }
                             }
                         }

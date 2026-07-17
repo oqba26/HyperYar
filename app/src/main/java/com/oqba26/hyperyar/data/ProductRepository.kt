@@ -23,6 +23,8 @@ class ProductRepository(
     suspend fun deleteUser(user: User) = userDao.deleteUser(user)
     @Suppress("unused")
     suspend fun getUserByUsername(username: String) = userDao.getUserByUsername(username)
+    @Suppress("unused")
+    suspend fun getUserCount() = userDao.getUserCount()
 
     // --- Waste Logs ---
     @Suppress("unused")

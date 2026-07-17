@@ -15,7 +15,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
     private val _deepAnalysisResult = MutableStateFlow<String?>(null)
     val deepAnalysisResult = _deepAnalysisResult.asStateFlow()
 
-    private val _isAnalyzing = MutableStateFlow(false)
+    private val _isAnalyzing = MutableStateFlow(value = false)
     @Suppress("unused")
     val isAnalyzing = _isAnalyzing.asStateFlow()
 
@@ -30,6 +30,24 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
 
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
+
+    private val _selectedCustomerId = MutableStateFlow<Int?>(null)
+    val selectedCustomerId: StateFlow<Int?> = _selectedCustomerId.asStateFlow()
+
+    private val _selectedSupplierId = MutableStateFlow<Int?>(null)
+    val selectedSupplierId: StateFlow<Int?> = _selectedSupplierId.asStateFlow()
+
+    fun selectCustomerForCart(customerId: Int?) {
+        _selectedCustomerId.value = customerId
+        _selectedSupplierId.value = null
+        if (customerId != null) _isPurchaseMode.value = false
+    }
+
+    fun selectSupplierForCart(supplierId: Int?) {
+        _selectedSupplierId.value = supplierId
+        _selectedCustomerId.value = null
+        if (supplierId != null) _isPurchaseMode.value = true
+    }
 
     val allCustomers: StateFlow<List<Customer>> = repository.allCustomers
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -50,14 +68,9 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
     val allInvoicesWithItems: StateFlow<List<InvoiceWithItems>> = repository.allInvoicesWithItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val totalProfit: StateFlow<Double> = repository.allInvoicesWithItems
-        .map { invoices ->
-            invoices.filter { it.invoice.type == InvoiceType.SALE }
-                .sumOf { invoiceWithItems ->
-                    invoiceWithItems.items.sumOf { (it.priceAtSale - it.buyPriceAtSale) * it.quantity }
-                }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val allUsers: StateFlow<List<User>> = repository.getAllUsers()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
 
     val topSellingProducts: StateFlow<List<Pair<String, Double>>> = repository.allInvoicesWithItems
         .map { invoices ->
@@ -65,7 +78,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
                 .flatMap { it.items }
                 .groupBy { it.productName }
                 .mapValues { entry -> entry.value.sumOf { it.quantity } }
-                .toList()
+                .map { it.key to it.value }
                 .sortedByDescending { it.second }
                 .take(5)
         }
@@ -77,7 +90,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
 
     val monthlyProfit: StateFlow<Double> = repository.allInvoicesWithItems.map { invoices ->
         val monthStart = System.currentTimeMillis().toMonthStart()
-        invoices.filter { it.invoice.timestamp >= monthStart && it.invoice.type == InvoiceType.SALE }.sumOf { inv ->
+        invoices.filter { (it.invoice.timestamp >= monthStart) && (it.invoice.type == InvoiceType.SALE) }.sumOf { inv ->
             inv.items.sumOf { (it.priceAtSale - it.buyPriceAtSale) * it.quantity }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
@@ -161,12 +174,12 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         hourlyData.mapIndexed { hour, total -> String.format(java.util.Locale.US, "%02d", hour) to total }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun redeemPoints(customerId: Int): Double {
+    fun redeemPoints(customerId: Int, loyaltyValue: Double): Double {
         val customer = allCustomers.value.find { it.id == customerId } ?: return 0.0
         val points = customer.loyaltyPoints
-        if (points < 10) return 0.0
+        if (points <= 0) return 0.0
         
-        val discount = points * 1000.0 // Every point = 1000 Toman discount
+        val discount = points * loyaltyValue
         viewModelScope.launch {
             repository.updateCustomer(customer.copy(loyaltyPoints = 0))
         }
@@ -277,7 +290,9 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         amountPaid: Double? = null,
         totalDiscount: Double = 0.0,
         dueDate: Long? = null,
-        installments: List<Pair<Double, Long?>>? = null
+        installments: List<Pair<Double, Long?>>? = null,
+        loyaltyEnabled: Boolean = false,
+        loyaltyRate: Double = 10000.0,
     ) = viewModelScope.launch {
         val currentCart = _cartItems.value
         if (currentCart.isEmpty()) return@launch
@@ -308,9 +323,9 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         }
         repository.saveInvoice(invoice, items, installments)
         
-        // Loyalty Points: 1 point for every 10,000 Tomans
-        if (type == InvoiceType.SALE && customerId != null) {
-            val pointsToAdd = (total / 10000).toInt()
+        // Loyalty Points
+        if (type == InvoiceType.SALE && customerId != null && loyaltyEnabled) {
+            val pointsToAdd = (total / loyaltyRate).toInt()
             if (pointsToAdd > 0) {
                 val customers = allCustomers.value
                 val customer = customers.find { it.id == customerId }
@@ -379,6 +394,27 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
 
     fun deleteCustomer(customer: Customer) = viewModelScope.launch {
         repository.deleteCustomer(customer)
+    }
+
+    fun insertUser(user: User) = viewModelScope.launch {
+        repository.insertUser(user)
+        launch { silentSync() }
+    }
+
+    fun deleteUser(user: User) = viewModelScope.launch {
+        repository.deleteUser(user)
+        val client = SupabaseManager.getClient()
+        if (client != null) {
+            try {
+                client.postgrest["users"].delete {
+                    filter {
+                        eq("username", user.username)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Sync", "Delete user failed: ${e.message}")
+            }
+        }
     }
 
     fun updateSupplier(supplier: Supplier) = viewModelScope.launch {
@@ -496,6 +532,9 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             val expenses = repository.allExpenses.first()
             if (expenses.isNotEmpty()) client.postgrest["expenses"].upsert(expenses)
 
+            val users = repository.getAllUsers().first()
+            if (users.isNotEmpty()) client.postgrest["users"].upsert(users)
+
             // Actual sync for debt transactions
             val transactions = repository.allCustomers.first().flatMap { repository.getTransactionsForPerson(it.id, "Customer").first() }
             if (transactions.isNotEmpty()) client.postgrest["debt_transactions"].upsert(transactions)
@@ -517,6 +556,9 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             
             val remoteCustomers = client.postgrest["customers"].select().decodeList<Customer>()
             remoteCustomers.forEach { repository.insertCustomer(it) }
+
+            val remoteUsers = client.postgrest["users"].select().decodeList<User>()
+            remoteUsers.forEach { repository.insertUser(it) }
             
             silentSync()
         } catch (e: Exception) {

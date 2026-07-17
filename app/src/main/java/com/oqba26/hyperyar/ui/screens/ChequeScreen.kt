@@ -46,8 +46,8 @@ fun ChequeScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("مدیریت چک‌ها") },
+            MediumTopAppBar(
+                title = { Text("مدیریت چک‌ها", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

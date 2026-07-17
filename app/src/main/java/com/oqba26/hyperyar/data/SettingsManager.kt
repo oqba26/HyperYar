@@ -24,7 +24,35 @@ class SettingsManager(private val context: Context) {
         val SHOP_ADDRESS = stringPreferencesKey("shop_address")
         val SHOP_TAX_ID = stringPreferencesKey("shop_tax_id")
         val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        val IS_LOCAL_LOGGED_IN = booleanPreferencesKey("is_local_logged_in")
+        val CURRENT_USER_NAME = stringPreferencesKey("current_user_name")
         val USER_ROLE = stringPreferencesKey("user_role") // ADMIN or STAFF
+        val LOYALTY_ENABLED = booleanPreferencesKey("loyalty_enabled")
+        val LOYALTY_RATE = stringPreferencesKey("loyalty_rate") // Purchase amount for 1 point
+        val LOYALTY_VALUE = stringPreferencesKey("loyalty_value") // Discount for 1 point
+        val PRINTER_ADDRESS = stringPreferencesKey("printer_address") // BT MAC or USB info
+        val PRINTER_TYPE = stringPreferencesKey("printer_type") // BT or USB or SHARE
+    }
+
+    val loyaltyEnabled: Flow<Boolean> = context.dataStore.data.map { it[LOYALTY_ENABLED] ?: true }
+    val loyaltyRate: Flow<String> = context.dataStore.data.map { it[LOYALTY_RATE] ?: "10000" }
+    val loyaltyValue: Flow<String> = context.dataStore.data.map { it[LOYALTY_VALUE] ?: "1000" }
+    val printerAddress: Flow<String> = context.dataStore.data.map { it[PRINTER_ADDRESS] ?: "" }
+    val printerType: Flow<String> = context.dataStore.data.map { it[PRINTER_TYPE] ?: "SHARE" }
+
+    suspend fun saveLoyaltySettings(enabled: Boolean, rate: String, value: String) {
+        context.dataStore.edit { preferences ->
+            preferences[LOYALTY_ENABLED] = enabled
+            preferences[LOYALTY_RATE] = rate
+            preferences[LOYALTY_VALUE] = value
+        }
+    }
+
+    suspend fun savePrinterSettings(address: String, type: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PRINTER_ADDRESS] = address
+            preferences[PRINTER_TYPE] = type
+        }
     }
 
     val selectedFont: Flow<String> = context.dataStore.data.map { preferences ->
@@ -49,6 +77,14 @@ class SettingsManager(private val context: Context) {
 
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IS_LOGGED_IN] ?: false
+    }
+
+    val isLocalLoggedIn: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[IS_LOCAL_LOGGED_IN] ?: false
+    }
+
+    val currentUserName: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[CURRENT_USER_NAME] ?: ""
     }
 
     val shopName: Flow<String> = context.dataStore.data.map { preferences ->
@@ -92,6 +128,17 @@ class SettingsManager(private val context: Context) {
     suspend fun setLoggedIn(loggedIn: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_LOGGED_IN] = loggedIn
+            if (!loggedIn) {
+                preferences[IS_LOCAL_LOGGED_IN] = false
+                preferences[CURRENT_USER_NAME] = ""
+            }
+        }
+    }
+
+    suspend fun setLocalLoggedIn(loggedIn: Boolean, userName: String = "") {
+        context.dataStore.edit { preferences ->
+            preferences[IS_LOCAL_LOGGED_IN] = loggedIn
+            preferences[CURRENT_USER_NAME] = userName
         }
     }
 

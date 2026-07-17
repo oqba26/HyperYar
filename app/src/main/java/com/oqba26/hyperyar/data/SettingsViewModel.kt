@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.*
 
 class SettingsViewModel(private val settingsManager: SettingsManager) : ViewModel() {
 
@@ -28,11 +29,36 @@ class SettingsViewModel(private val settingsManager: SettingsManager) : ViewMode
     val selectedTheme: StateFlow<String> = settingsManager.selectedTheme
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Purple")
 
+    val isLoggedIn: StateFlow<Boolean?> = settingsManager.isLoggedIn
+        .map { it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val isSyncEnabled: StateFlow<Boolean> = settingsManager.isSyncEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue = true)
+
+    val isLocalLoggedIn: StateFlow<Boolean> = settingsManager.isLocalLoggedIn
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue = false)
+
+    val currentUserName: StateFlow<String> = settingsManager.currentUserName
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue = "")
 
     val userRole: StateFlow<String> = settingsManager.userRole
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "ADMIN")
+
+    val loyaltyEnabled: StateFlow<Boolean> = settingsManager.loyaltyEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue = true)
+
+    val loyaltyRate: StateFlow<String> = settingsManager.loyaltyRate
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "10000")
+
+    val loyaltyValue: StateFlow<String> = settingsManager.loyaltyValue
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "1000")
+
+    val printerAddress: StateFlow<String> = settingsManager.printerAddress
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val printerType: StateFlow<String> = settingsManager.printerType
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "SHARE")
 
     fun saveShopInfo(name: String, phone: String, address: String, taxId: String) {
         viewModelScope.launch {
@@ -67,6 +93,24 @@ class SettingsViewModel(private val settingsManager: SettingsManager) : ViewMode
     fun setLoggedIn(loggedIn: Boolean) {
         viewModelScope.launch {
             settingsManager.setLoggedIn(loggedIn)
+        }
+    }
+
+    fun setLocalLoggedIn(loggedIn: Boolean, userName: String = "") {
+        viewModelScope.launch {
+            settingsManager.setLocalLoggedIn(loggedIn, userName)
+        }
+    }
+
+    fun saveLoyaltySettings(enabled: Boolean, rate: String, value: String) {
+        viewModelScope.launch {
+            settingsManager.saveLoyaltySettings(enabled, rate, value)
+        }
+    }
+
+    fun savePrinterSettings(address: String, type: String) {
+        viewModelScope.launch {
+            settingsManager.savePrinterSettings(address, type)
         }
     }
 }

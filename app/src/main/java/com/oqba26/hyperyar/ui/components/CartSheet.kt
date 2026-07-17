@@ -30,15 +30,28 @@ fun CartSheetContent(
     isPurchaseMode: Boolean = false,
     customers: List<Customer> = emptyList(),
     suppliers: List<Supplier> = emptyList(),
+    loyaltyRate: Double = 10000.0,
+    loyaltyValue: Double = 1000.0,
+    initialSelectedPersonId: Int? = null,
     onPersonSelected: (Int?) -> Unit,
     onRemove: (CartItem) -> Unit,
-    onRedeemPoints: (Int) -> Double,
+    onRedeemPoints: (Int, Double) -> Double,
     onCheckout: (Double, Double, String?, String?, Long?, List<Pair<Double, Long?>>?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedPersonId by remember { mutableStateOf<Int?>(null) }
-    var manualCustomerName by remember { mutableStateOf("") }
-    var manualCustomerPhone by remember { mutableStateOf("") }
+    var selectedPersonId by remember { mutableStateOf(initialSelectedPersonId) }
+    var manualCustomerName by remember { 
+        mutableStateOf(
+            if (isPurchaseMode) suppliers.find { it.id == initialSelectedPersonId }?.name ?: ""
+            else customers.find { it.id == initialSelectedPersonId }?.name ?: ""
+        )
+    }
+    var manualCustomerPhone by remember { 
+        mutableStateOf(
+            if (isPurchaseMode) suppliers.find { it.id == initialSelectedPersonId }?.phone ?: ""
+            else customers.find { it.id == initialSelectedPersonId }?.phone ?: ""
+        )
+    }
     var pointsDiscount by remember { mutableDoubleStateOf(0.0) }
     
     var amountPaidText by remember { mutableStateOf("") }
@@ -154,15 +167,15 @@ fun CartSheetContent(
 
             if (!isPurchaseMode && selectedPersonId != null) {
                 val customer = customers.find { it.id == selectedPersonId }
-                if (customer != null && customer.loyaltyPoints >= 10) {
+                if (customer != null && customer.loyaltyPoints > 0) {
                     Button(
                         onClick = { 
-                            pointsDiscount = onRedeemPoints(customer.id)
+                            pointsDiscount = onRedeemPoints(customer.id, loyaltyValue)
                         },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {
-                        Text("استفاده از ${customer.loyaltyPoints} امتیاز (${(customer.loyaltyPoints * 1000).toDouble().toPersianPrice()} تخفیف)")
+                        Text("استفاده از ${customer.loyaltyPoints} امتیاز (${(customer.loyaltyPoints * loyaltyValue).toPersianPrice()} تخفیف)")
                     }
                 }
             }
@@ -420,15 +433,11 @@ fun AddInstallmentDialog(
     var dueDate by remember { mutableStateOf<Long?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("افزودن قسط جدید", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(16.dp))
+    HyperDialog(
+        onDismissRequest = onDismiss,
+        title = "افزودن قسط جدید",
+        content = {
+            Column {
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it.cleanNumber() },
@@ -450,30 +459,34 @@ fun AddInstallmentDialog(
                         }
                     }
                 )
-                
-                Spacer(Modifier.height(24.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { 
-                            val amt = amountText.cleanNumber().toDoubleOrNull() ?: 0.0
-                            if (amt > 0) onConfirm(amt, dueDate) 
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("تایید") }
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text("انصراف")
-                    }
-                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val amt = amountText.cleanNumber().toDoubleOrNull() ?: 0.0
+                    if (amt > 0) onConfirm(amt, dueDate)
+                },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("تایید", style = MaterialTheme.typography.labelLarge)
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("انصراف", style = MaterialTheme.typography.labelLarge)
             }
         }
-    }
+    )
     
     if (showDatePicker) {
         ShamsiDatePicker(

@@ -18,6 +18,7 @@ import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.ui.components.AddCustomerDialog
 import com.oqba26.hyperyar.ui.components.EditCustomerDialog
 import com.oqba26.hyperyar.ui.components.CustomerDetailDialog
+import com.oqba26.hyperyar.ui.components.ConfirmDialog
 import androidx.compose.ui.unit.Dp
 import com.oqba26.hyperyar.util.toPersianDigits
 import com.oqba26.hyperyar.util.toPersianPrice
@@ -26,7 +27,8 @@ import com.oqba26.hyperyar.util.toPersianPrice
 @Composable
 fun CustomerScreen(
     viewModel: ProductViewModel,
-    bottomPadding: Dp = 0.dp
+    bottomPadding: Dp = 0.dp,
+    onNavigateBack: () -> Unit = {}
 ) {
     val customers by viewModel.allCustomers.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -56,21 +58,17 @@ fun CustomerScreen(
     }
 
     customerToDelete?.let { customer ->
-        AlertDialog(
-            onDismissRequest = { customerToDelete = null },
-            title = { Text("حذف مشتری") },
-            text = { Text("آیا از حذف مشتری «${customer.name}» اطمینان دارید؟") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteCustomer(customer)
-                        customerToDelete = null
-                    }
-                ) { Text("حذف", color = Color.Red) }
+        ConfirmDialog(
+            title = "حذف مشتری",
+            message = "آیا از حذف مشتری «${customer.name}» اطمینان دارید؟",
+            confirmText = "حذف",
+            cancelText = "انصراف",
+            onConfirm = {
+                viewModel.deleteCustomer(customer)
+                customerToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { customerToDelete = null }) { Text("انصراف") }
-            }
+            onDismiss = { customerToDelete = null },
+            isDanger = true
         )
     }
 
@@ -95,8 +93,8 @@ fun CustomerScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("مشتریان") },
+            MediumTopAppBar(
+                title = { Text("مشتریان", style = MaterialTheme.typography.titleLarge) },
                 actions = {
                     Surface(
                         onClick = { showAddDialog = true },
@@ -182,7 +180,13 @@ fun CustomerScreen(
                                     color = if (customer.balance < 0) Color.Red else Color(0xFF2E7D32),
                                     fontWeight = FontWeight.Bold
                                 )
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = {
+                                        viewModel.selectCustomerForCart(customer.id)
+                                        onNavigateBack()
+                                    }) {
+                                        Icon(Icons.Default.AddShoppingCart, null, tint = Color(0xFF2196F3), modifier = Modifier.size(20.dp))
+                                    }
                                     IconButton(onClick = { customerToEdit = customer }) {
                                         Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                     }

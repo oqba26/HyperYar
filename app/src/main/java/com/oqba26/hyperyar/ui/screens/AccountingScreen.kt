@@ -19,6 +19,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.ProductViewModel
 import com.oqba26.hyperyar.util.toPersianDigits
 import androidx.compose.ui.unit.Dp
+import com.oqba26.hyperyar.ui.components.SimpleBarChart
+import com.oqba26.hyperyar.util.toPersianNumber
 import com.oqba26.hyperyar.util.toPersianPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +39,12 @@ fun AccountingScreen(
     val suppliers by viewModel.allSuppliers.collectAsStateWithLifecycle()
     val cheques by viewModel.allCheques.collectAsStateWithLifecycle()
 
-    //val isAnalyzing by viewModel.isAnalyzing.collectAsStateWithLifecycle()
+    // Data for Reports
+    val topProducts by viewModel.topSellingProducts.collectAsStateWithLifecycle()
+    val profitByCategory by viewModel.profitByCategory.collectAsStateWithLifecycle()
+    val weeklyComparison by viewModel.weeklyComparison.collectAsStateWithLifecycle()
+    val salesByHour by viewModel.salesByHour.collectAsStateWithLifecycle()
+    
     val analysisResult by viewModel.deepAnalysisResult.collectAsStateWithLifecycle()
     
     val sheetState = rememberModalBottomSheetState()
@@ -54,22 +61,8 @@ fun AccountingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = { 
-            TopAppBar(
-                title = { Text("حسابداری و مالی", style = MaterialTheme.typography.titleMedium) },
-                /*
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.performDeepAnalysis() },
-                        enabled = !isAnalyzing
-                    ) {
-                        if (isAnalyzing) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = "AI Analysis", tint = Color.Yellow)
-                        }
-                    }
-                },
-                */
+            MediumTopAppBar(
+                title = { Text("حسابداری و مالی", style = MaterialTheme.typography.titleLarge) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -161,19 +154,106 @@ fun AccountingScreen(
             Spacer(Modifier.height(8.dp))
             HorizontalDivider()
             
-            // Text("گزارشات و ابزارها", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            
-            /*
-            OutlinedButton(
-                onClick = { viewModel.performDeepAnalysis() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Icon(Icons.Default.AutoAwesome, null)
-                Spacer(Modifier.width(8.dp))
-                Text("تحلیل هوشمند وضعیت فروشگاه")
+            // --- MERGED REPORTS SECTION ---
+            if (isAdmin) {
+                Text("گزارشات و تحلیل فروش", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+                // Weekly Comparison
+                val currentWeek = weeklyComparison.first
+                val previousWeek = weeklyComparison.second
+                val diff = currentWeek - previousWeek
+                val percent = if (previousWeek > 0) (diff / previousWeek) * 100 else 0.0
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("مقایسه هفتگی فروش", style = MaterialTheme.typography.labelMedium)
+                            Text(currentWeek.toPersianPrice(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = if (diff >= 0) "+${percent.toInt()}% رشد" else "${percent.toInt()}% کاهش",
+                                color = if (diff >= 0) Color(0xFF2E7D32) else Color.Red,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text("نسبت به ۷ روز قبل", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        }
+                    }
+                }
+
+                Text("سود خالص به تفکیک محصولات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        if (profitByCategory.isEmpty()) {
+                            Text("داده‌ای موجود نیست")
+                        } else {
+                            profitByCategory.toList().sortedByDescending { it.second }.take(5).forEach { (name, profit) ->
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(name)
+                                    Text(profit.toPersianPrice(), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text("تحلیل حجم فروش محصولات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("نمودار حجم فروش (۵ کالای برتر)", style = MaterialTheme.typography.labelMedium)
+                        SimpleBarChart(data = topProducts)
+                    }
+                }
+
+                Text("تحلیل ساعات شلوغی (امروز)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("نمودار توزیع فروش در ۲۴ ساعت", style = MaterialTheme.typography.labelMedium)
+                        SimpleBarChart(data = salesByHour, barColor = Color(0xFF673AB7))
+                    }
+                }
+
+                Text("لیست پرفروش‌ترین‌ها", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (topProducts.isEmpty()) {
+                            Text("داده‌ای برای نمایش وجود ندارد")
+                        } else {
+                            topProducts.forEach { (name, qty) ->
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(name)
+                                    Text("${qty.toPersianNumber()} عدد", fontWeight = FontWeight.Bold)
+                                }
+                                HorizontalDivider(thickness = 0.5.dp, color = Color.Gray.copy(alpha = 0.2f))
+                            }
+                        }
+                    }
+                }
             }
-            */
         }
     }
 

@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,7 +28,7 @@ import com.oqba26.hyperyar.util.toPersianDigits
 fun SupplierScreen(
     viewModel: ProductViewModel,
     bottomPadding: Dp = 0.dp,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit = {}
 ) {
     val suppliers by viewModel.allSuppliers.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -60,8 +62,8 @@ fun SupplierScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("تامین‌کنندگان") },
+            MediumTopAppBar(
+                title = { Text("تامین‌کنندگان", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -107,6 +109,17 @@ fun SupplierScreen(
                                 Text(supplier.name, style = MaterialTheme.typography.titleMedium)
                                 if (supplier.phone.isNotBlank()) {
                                     Text(supplier.phone.toPersianDigits(), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    viewModel.selectSupplierForCart(supplier.id)
+                                    onNavigateBack()
+                                }) {
+                                    Icon(Icons.Default.AddShoppingCart, null, tint = Color(0xFFE91E63), modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = { /* Add edit if needed */ }) {
+                                    Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }

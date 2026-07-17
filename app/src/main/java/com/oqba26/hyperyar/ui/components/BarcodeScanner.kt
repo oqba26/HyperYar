@@ -24,40 +24,32 @@ fun BarcodeScannerDialog(
     onDismiss: () -> Unit,
     onBarcodeScanned: (String) -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+    HyperDialog(
+        onDismissRequest = onDismiss,
+        title = "اسکن بارکد کالا",
+        content = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        text = "اسکن بارکد کالا",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp)
-                    ) {
-                        CameraPreview(onBarcodeScanned = onBarcodeScanned)
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("انصراف", color = MaterialTheme.colorScheme.onError)
-                    }
-                }
+                CameraPreview(onBarcodeScanned = onBarcodeScanned)
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("انصراف", style = MaterialTheme.typography.labelLarge)
             }
         }
-    }
+    )
 }
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)

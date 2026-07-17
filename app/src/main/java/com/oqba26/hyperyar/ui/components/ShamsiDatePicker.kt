@@ -50,207 +50,181 @@ fun ShamsiDatePicker(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth(0.95f)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
-                            .padding(vertical = 20.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "انتخاب تاریخ شمسی",
-                            color = Color.White,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+    HyperDialog(
+        onDismissRequest = onDismiss,
+        title = "انتخاب تاریخ شمسی",
+        content = {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        if (displayedMonth == 1) {
+                            displayedMonth = 12
+                            displayedYear--
+                        } else {
+                            displayedMonth--
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "ماه قبل")
                     }
 
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showMonthPicker = true }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            IconButton(onClick = {
-                                if (displayedMonth == 1) {
-                                    displayedMonth = 12
-                                    displayedYear--
-                                } else {
-                                    displayedMonth--
-                                }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "ماه قبل")
-                            }
+                            Text(
+                                text = PersianDate().apply { shMonth = displayedMonth }.monthName(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(20.dp))
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { showMonthPicker = true }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = PersianDate().apply { shMonth = displayedMonth }.monthName(),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(20.dp))
-                                    
-                                    DropdownMenu(
-                                        expanded = showMonthPicker,
-                                        onDismissRequest = { showMonthPicker = false }
-                                    ) {
-                                        (1..12).forEach { m ->
-                                            DropdownMenuItem(
-                                                text = { Text(PersianDate().apply { shMonth = m }.monthName()) },
-                                                onClick = {
-                                                    displayedMonth = m
-                                                    showMonthPicker = false
-                                                }
-                                            )
+                            DropdownMenu(
+                                expanded = showMonthPicker,
+                                onDismissRequest = { showMonthPicker = false }
+                            ) {
+                                (1..12).forEach { m ->
+                                    DropdownMenuItem(
+                                        text = { Text(PersianDate().apply { shMonth = m }.monthName()) },
+                                        onClick = {
+                                            displayedMonth = m
+                                            showMonthPicker = false
                                         }
-                                    }
-                                }
-                                
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { showYearPicker = true }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = displayedYear.toString().toPersianDigits(),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
                                     )
-                                    Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(20.dp))
-                                }
-                            }
-
-                            IconButton(onClick = {
-                                if (displayedMonth == 12) {
-                                    displayedMonth = 1
-                                    displayedYear++
-                                } else {
-                                    displayedMonth++
-                                }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "ماه بعد")
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            val days = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
-                            days.forEach { d ->
-                                Text(
-                                    text = d,
-                                    modifier = Modifier.weight(1f),
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        val monthData = remember(displayedYear, displayedMonth) {
-                            getCalendarData(displayedYear, displayedMonth)
-                        }
-
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(7),
-                            modifier = Modifier.height(260.dp)
-                        ) {
-                            items(monthData.size) { index ->
-                                val day = monthData[index]
-                                if (day == 0) {
-                                    Spacer(modifier = Modifier.aspectRatio(1f))
-                                } else {
-                                    val isSelected = day == selectedDay
-                                    val isToday = isToday(displayedYear, displayedMonth, day)
-                                    val isFriday = (index % 7) == 6
-
-                                    Box(
-                                        modifier = Modifier
-                                            .aspectRatio(1f)
-                                            .padding(4.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isSelected) MaterialTheme.colorScheme.primary
-                                                else if (isToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                                else Color.Transparent
-                                            )
-                                            .clickable { selectedDay = day },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = day.toString().toPersianDigits(),
-                                            color = if (isSelected) Color.White
-                                            else if (isFriday) MaterialTheme.colorScheme.error
-                                            else MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showYearPicker = true }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Button(
-                                onClick = {
-                                    val result = PersianDate().apply {
-                                        shYear = displayedYear
-                                        shMonth = displayedMonth
-                                        shDay = selectedDay
-                                        hour = 12
-                                    }
-                                    onDateSelected(result.time)
-                                },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = MaterialTheme.shapes.medium
+                            Text(
+                                text = displayedYear.toString().toPersianDigits(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(20.dp))
+                        }
+                    }
+
+                    IconButton(onClick = {
+                        if (displayedMonth == 12) {
+                            displayedMonth = 1
+                            displayedYear++
+                        } else {
+                            displayedMonth++
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "ماه بعد")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    val days = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
+                    days.forEach { d ->
+                        Text(
+                            text = d,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val monthData = remember(displayedYear, displayedMonth) {
+                    getCalendarData(displayedYear, displayedMonth)
+                }
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(7),
+                    modifier = Modifier.height(260.dp)
+                ) {
+                    items(monthData.size) { index ->
+                        val day = monthData[index]
+                        if (day == 0) {
+                            Spacer(modifier = Modifier.aspectRatio(1f))
+                        } else {
+                            val isSelected = day == selectedDay
+                            val isToday = isToday(displayedYear, displayedMonth, day)
+                            val isFriday = (index % 7) == 6
+
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .padding(4.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary
+                                        else if (isToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                        else Color.Transparent
+                                    )
+                                    .clickable { selectedDay = day },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("تایید", style = MaterialTheme.typography.labelLarge)
-                            }
-                            Button(
-                                onClick = onDismiss,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = MaterialTheme.shapes.medium,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = Color.White
+                                Text(
+                                    text = day.toString().toPersianDigits(),
+                                    color = if (isSelected) Color.White
+                                    else if (isFriday) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
                                 )
-                            ) {
-                                Text("انصراف", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
                 }
             }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val result = PersianDate().apply {
+                        shYear = displayedYear
+                        shMonth = displayedMonth
+                        shDay = selectedDay
+                        hour = 12
+                    }
+                    onDateSelected(result.time)
+                },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("تایید", style = MaterialTheme.typography.labelLarge)
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("انصراف", style = MaterialTheme.typography.labelLarge)
+            }
         }
-    }
+    )
 }
 
 @Composable
@@ -267,39 +241,30 @@ fun YearPickerDialog(
         if (index != -1) listState.scrollToItem(index)
     }
 
-    Dialog(onDismissRequest = onDismissRequest) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            tonalElevation = 6.dp,
-            modifier = Modifier.fillMaxWidth(0.8f).height(400.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "انتخاب سال",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                androidx.compose.foundation.lazy.LazyColumn(
-                    state = listState,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(years.size) { index ->
-                        val year = years[index]
-                        Text(
-                            text = year.toString().toPersianDigits(),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onYearSelected(year) }
-                                .padding(vertical = 12.dp),
-                            textAlign = TextAlign.Center,
-                            style = if (year == initialYear) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
-                            color = if (year == initialYear) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+    HyperDialog(
+        onDismissRequest = onDismissRequest,
+        title = "انتخاب سال",
+        content = {
+            androidx.compose.foundation.lazy.LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxWidth().height(300.dp)
+            ) {
+                items(years.size) { index ->
+                    val year = years[index]
+                    Text(
+                        text = year.toString().toPersianDigits(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onYearSelected(year) }
+                            .padding(vertical = 12.dp),
+                        textAlign = TextAlign.Center,
+                        style = if (year == initialYear) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
+                        color = if (year == initialYear) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
-    }
+    )
 }
 
 private fun getCalendarData(year: Int, month: Int): List<Int> {

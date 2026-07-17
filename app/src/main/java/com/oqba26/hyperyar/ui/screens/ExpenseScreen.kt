@@ -43,8 +43,8 @@ fun ExpenseScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("لیست هزینه‌ها") },
+            MediumTopAppBar(
+                title = { Text("لیست هزینه‌ها", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

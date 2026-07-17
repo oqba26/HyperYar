@@ -25,8 +25,7 @@ fun AppBottomBar(
             listOf(
                 NavigationItemData("محصولات", Icons.Default.Inventory, "products"),
                 NavigationItemData("مشتریان", Icons.Default.People, "customers"),
-                NavigationItemData("حسابداری", Icons.Default.AccountBalanceWallet, "accounting"),
-                NavigationItemData("گزارشات", Icons.Default.BarChart, "reports", isAdminOnly = true),
+                NavigationItemData("حسابداری", Icons.Default.AccountBalanceWallet, "accounting", isAdminOnly = true),
                 NavigationItemData("سبد", Icons.Default.ShoppingCart, "cart"),
                 NavigationItemData("تنظیمات", Icons.Default.Settings, "settings")
             ).filter { !it.isAdminOnly || isAdmin }

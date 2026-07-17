@@ -56,125 +56,103 @@ fun AddCustomerDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
+    HyperDialog(
+        onDismissRequest = onDismiss,
+        title = "افزودن مشتری جدید",
+        content = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام و نام خانوادگی") },
+                    leadingIcon = { Icon(Icons.Default.Person, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                if (suggestedContacts.isNotEmpty()) {
                     Text(
-                        text = "افزودن مشتری جدید",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        text = "یافت شده در مخاطبین گوشی:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("نام و نام خانوادگی") },
-                            leadingIcon = { Icon(Icons.Default.Person, null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        if (suggestedContacts.isNotEmpty()) {
-                            Text(
-                                text = "یافت شده در مخاطبین گوشی:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                items(suggestedContacts) { contact ->
-                                    SuggestionChip(
-                                        onClick = {
-                                            name = contact.name
-                                            phone = contact.phoneNumber
-                                            suggestedContacts = emptyList()
-                                        },
-                                        label = {
-                                            Column {
-                                                Text(contact.name, style = MaterialTheme.typography.labelSmall)
-                                                Text(contact.phoneNumber.toPersianDigits(), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = phone.toPersianDigits(),
-                            onValueChange = { phone = it.cleanNumber() },
-                            label = { Text("شماره تماس") },
-                            leadingIcon = { Icon(Icons.Default.Phone, null) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = address,
-                            onValueChange = { address = it },
-                            label = { Text("آدرس") },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                if (name.isNotBlank()) {
-                                    onConfirm(
-                                        Customer(
-                                            name = name,
-                                            phone = phone,
-                                            address = address,
-                                            balance = 0.0
-                                        )
-                                    )
+                        items(suggestedContacts) { contact ->
+                            SuggestionChip(
+                                onClick = {
+                                    name = contact.name
+                                    phone = contact.phoneNumber
+                                    suggestedContacts = emptyList()
+                                },
+                                label = {
+                                    Column {
+                                        Text(contact.name, style = MaterialTheme.typography.labelSmall)
+                                        Text(contact.phoneNumber.toPersianDigits(), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    }
                                 }
-                            },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
                             )
-                        ) {
-                            Text("ثبت", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
-                        }
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("انصراف", color = MaterialTheme.colorScheme.onError, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
+
+                OutlinedTextField(
+                    value = phone.toPersianDigits(),
+                    onValueChange = { phone = it.cleanNumber() },
+                    label = { Text("شماره تماس") },
+                    leadingIcon = { Icon(Icons.Default.Phone, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("آدرس") },
+                    leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onConfirm(
+                            Customer(
+                                name = name,
+                                phone = phone,
+                                address = address,
+                                balance = 0.0
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("ثبت", style = MaterialTheme.typography.labelLarge)
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("انصراف", style = MaterialTheme.typography.labelLarge)
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -203,135 +181,113 @@ fun EditCustomerDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
+    HyperDialog(
+        onDismissRequest = onDismiss,
+        title = "ویرایش اطلاعات مشتری",
+        content = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام و نام خانوادگی") },
+                    leadingIcon = { Icon(Icons.Default.Person, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                if (suggestedContacts.isNotEmpty()) {
                     Text(
-                        text = "ویرایش اطلاعات مشتری",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        text = "یافت شده در مخاطبین گوشی:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("نام و نام خانوادگی") },
-                            leadingIcon = { Icon(Icons.Default.Person, null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        if (suggestedContacts.isNotEmpty()) {
-                            Text(
-                                text = "یافت شده در مخاطبین گوشی:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                items(suggestedContacts) { contact ->
-                                    SuggestionChip(
-                                        onClick = {
-                                            name = contact.name
-                                            phone = contact.phoneNumber
-                                            suggestedContacts = emptyList()
-                                        },
-                                        label = {
-                                            Column {
-                                                Text(contact.name, style = MaterialTheme.typography.labelSmall)
-                                                Text(contact.phoneNumber.toPersianDigits(), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = phone.toPersianDigits(),
-                            onValueChange = { phone = it.cleanNumber() },
-                            label = { Text("شماره تماس") },
-                            leadingIcon = { Icon(Icons.Default.Phone, null) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = address,
-                            onValueChange = { address = it },
-                            label = { Text("آدرس") },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2
-                        )
-
-                        OutlinedTextField(
-                            value = balance,
-                            onValueChange = { balance = it.cleanNumber() },
-                            label = { Text("مانده حساب") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            visualTransformation = PersianNumberVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                if (name.isNotBlank()) {
-                                    onConfirm(
-                                        customer.copy(
-                                            name = name,
-                                            phone = phone,
-                                            address = address,
-                                            balance = balance.toDoubleOrNull() ?: 0.0
-                                        )
-                                    )
+                        items(suggestedContacts) { contact ->
+                            SuggestionChip(
+                                onClick = {
+                                    name = contact.name
+                                    phone = contact.phoneNumber
+                                    suggestedContacts = emptyList()
+                                },
+                                label = {
+                                    Column {
+                                        Text(contact.name, style = MaterialTheme.typography.labelSmall)
+                                        Text(contact.phoneNumber.toPersianDigits(), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    }
                                 }
-                            },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
                             )
-                        ) {
-                            Text("بروزرسانی", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
-                        }
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("انصراف", color = MaterialTheme.colorScheme.onError, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
+
+                OutlinedTextField(
+                    value = phone.toPersianDigits(),
+                    onValueChange = { phone = it.cleanNumber() },
+                    label = { Text("شماره تماس") },
+                    leadingIcon = { Icon(Icons.Default.Phone, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("آدرس") },
+                    leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2
+                )
+
+                OutlinedTextField(
+                    value = balance,
+                    onValueChange = { balance = it.cleanNumber() },
+                    label = { Text("مانده حساب") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = PersianNumberVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onConfirm(
+                            customer.copy(
+                                name = name,
+                                phone = phone,
+                                address = address,
+                                balance = balance.toDoubleOrNull() ?: 0.0
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("بروزرسانی", style = MaterialTheme.typography.labelLarge)
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("انصراف", style = MaterialTheme.typography.labelLarge)
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -349,10 +305,10 @@ fun CustomerDetailDialog(
     }
 
     val installments = remember(transactions) {
-        transactions.filter { 
-            (it.type == "Debt") && 
-            (it.dueDate != null) && 
-            (it.description.startsWith("قسط")) 
+        transactions.filter {
+            (it.type == "Debt") &&
+            (it.dueDate != null) &&
+            (it.description.startsWith("قسط"))
         }.sortedBy { it.dueDate!! }
     }
 
@@ -363,169 +319,153 @@ fun CustomerDetailDialog(
     var paymentAmount by remember { mutableStateOf("") }
     var paymentDesc by remember { mutableStateOf("") }
 
-    Dialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
+    HyperDialog(
+        onDismissRequest = onDismiss,
+        title = customer.name,
+        content = {
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.9f)
-                    .padding(4.dp)
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column {
-                    // Top Bar
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.primary)
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                // Financial Summary
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MaterialTheme.colorScheme.onPrimary)
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            FinancialRow("کل خریدها:", totalPurchased.toPersianPrice(), MaterialTheme.colorScheme.onSurface)
+                            FinancialRow("مجموع پرداختی:", totalPaid.toPersianPrice(), Color(0xFF2E7D32))
+                            HorizontalDivider()
+                            FinancialRow("مانده بدهی کل:", customer.balance.toPersianPrice(), if (customer.balance < 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32), isBold = true)
                         }
-                        Text(
-                            customer.name, 
-                            style = MaterialTheme.typography.titleLarge, 
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
                     }
+                }
 
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Financial Summary
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    FinancialRow("کل خریدها:", totalPurchased.toPersianPrice(), MaterialTheme.colorScheme.onSurface)
-                                    FinancialRow("مجموع پرداختی:", totalPaid.toPersianPrice(), Color(0xFF2E7D32))
-                                    HorizontalDivider()
-                                    FinancialRow("مانده بدهی کل:", customer.balance.toPersianPrice(), if (customer.balance < 0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32), isBold = true)
-                                }
-                            }
-                        }
-
-                        item {
-                            if (showAddPayment) {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text("ثبت پرداختی جدید", fontWeight = FontWeight.Bold)
-                                        OutlinedTextField(
-                                            value = paymentAmount,
-                                            onValueChange = { paymentAmount = it.cleanNumber() },
-                                            label = { Text("مبلغ (تومان)") },
-                                            visualTransformation = PersianNumberVisualTransformation(),
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                        OutlinedTextField(
-                                            value = paymentDesc,
-                                            onValueChange = { paymentDesc = it },
-                                            label = { Text("توضیحات") },
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Button(
-                                                onClick = {
-                                                    if (paymentAmount.isNotBlank()) {
-                                                        onAddPayment(paymentAmount.toDoubleOrNull() ?: 0.0, paymentDesc)
-                                                        showAddPayment = false
-                                                        paymentAmount = ""
-                                                        paymentDesc = ""
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f).height(48.dp),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.primary
-                                                )
-                                            ) {
-                                                Text("ثبت", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
-                                            }
-                                            Button(
-                                                onClick = { showAddPayment = false },
-                                                modifier = Modifier.weight(1f).height(48.dp),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.error
-                                                )
-                                            ) {
-                                                Text("انصراف", color = MaterialTheme.colorScheme.onError, style = MaterialTheme.typography.labelLarge)
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    Button(
-                                        onClick = { showAddPayment = true },
-                                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                                    ) {
-                                        Icon(Icons.Default.Add, null)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("ثبت دریافت وجه")
-                                    }
-                                }
-                            }
-                        }
-
-                        item {
-                            Text(
-                                text = "تاریخچه فاکتورها و اقساط",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-
-                        if (customerInvoices.isEmpty() && transactions.isEmpty()) {
-                            item {
-                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                    Text("سابقه ای یافت نشد.")
-                                }
-                            }
-                        } else {
-                            items(customerInvoices) { invoiceWithItems ->
-                                val invoiceInstallments = installments.filter { it.invoiceId == invoiceWithItems.invoice.id }
-                                InvoiceAndInstallmentGroup(
-                                    invoiceWithItems = invoiceWithItems,
-                                    installments = invoiceInstallments,
-                                    onPayInstallment = onPayInstallment,
-                                    onDeleteInstallment = onDeleteInstallment
+                item {
+                    if (showAddPayment) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("ثبت پرداختی جدید", fontWeight = FontWeight.Bold)
+                                OutlinedTextField(
+                                    value = paymentAmount,
+                                    onValueChange = { paymentAmount = it.cleanNumber() },
+                                    label = { Text("مبلغ (تومان)") },
+                                    visualTransformation = PersianNumberVisualTransformation(),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+                                OutlinedTextField(
+                                    value = paymentDesc,
+                                    onValueChange = { paymentDesc = it },
+                                    label = { Text("توضیحات") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            if (paymentAmount.isNotBlank()) {
+                                                onAddPayment(paymentAmount.toDoubleOrNull() ?: 0.0, paymentDesc)
+                                                showAddPayment = false
+                                                paymentAmount = ""
+                                                paymentDesc = ""
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = MaterialTheme.shapes.medium
+                                    ) {
+                                        Text("ثبت", style = MaterialTheme.typography.labelLarge)
+                                    }
+                                    Button(
+                                        onClick = { showAddPayment = false },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = MaterialTheme.shapes.medium,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    ) {
+                                        Text("انصراف", style = MaterialTheme.typography.labelLarge)
+                                    }
+                                }
                             }
-                            
-                            // Also show other transactions not tied to invoices if any
-                            val otherTransactions = transactions.filter { it.invoiceId == null }
-                            if (otherTransactions.isNotEmpty()) {
-                                item {
-                                    Text("سایر تراکنش‌ها", style = MaterialTheme.typography.titleSmall)
-                                }
-                                items(otherTransactions) { transaction ->
-                                    TransactionItem(transaction)
-                                }
+                        }
+                    } else {
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Button(
+                                onClick = { showAddPayment = true },
+                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Add, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("ثبت دریافت وجه")
                             }
                         }
                     }
                 }
+
+                item {
+                    Text(
+                        text = "تاریخچه فاکتورها و اقساط",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                if (customerInvoices.isEmpty() && transactions.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("سابقه ای یافت نشد.")
+                        }
+                    }
+                } else {
+                    items(customerInvoices) { invoiceWithItems ->
+                        val invoiceInstallments = installments.filter { it.invoiceId == invoiceWithItems.invoice.id }
+                        InvoiceAndInstallmentGroup(
+                            invoiceWithItems = invoiceWithItems,
+                            installments = invoiceInstallments,
+                            onPayInstallment = onPayInstallment,
+                            onDeleteInstallment = onDeleteInstallment
+                        )
+                    }
+
+                    // Also show other transactions not tied to invoices if any
+                    val otherTransactions = transactions.filter { it.invoiceId == null }
+                    if (otherTransactions.isNotEmpty()) {
+                        item {
+                            Text("سایر تراکنش‌ها", style = MaterialTheme.typography.titleSmall)
+                        }
+                        items(otherTransactions) { transaction ->
+                            TransactionItem(transaction)
+                        }
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text("بستن", style = MaterialTheme.typography.labelLarge)
             }
         }
-    }
+    )
 }
 
 @Composable

@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oqba26.hyperyar.data.InvoiceType
 import com.oqba26.hyperyar.data.InvoiceWithItems
 import com.oqba26.hyperyar.data.ProductViewModel
+import com.oqba26.hyperyar.ui.components.ConfirmDialog
 import com.oqba26.hyperyar.util.InvoicePdfHelper
 import com.oqba26.hyperyar.util.toPersianDateString
 import com.oqba26.hyperyar.util.toPersianDigits
@@ -52,8 +53,8 @@ fun HistoryScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text("تاریخچه فاکتورها") },
+            MediumTopAppBar(
+                title = { Text("تاریخچه فاکتورها", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
@@ -101,39 +102,24 @@ fun HistoryScreen(
 
     if (selectedInvoiceForAction != null) {
         val invoice = selectedInvoiceForAction!!
-        AlertDialog(
-            onDismissRequest = { selectedInvoiceForAction = null },
-            title = { Text(if (actionType == "delete") "حذف فاکتور" else "مرجوع کردن فاکتور") },
-            text = {
-                Text(
-                    if (actionType == "delete") 
-                        "آیا از حذف فاکتور #${invoice.invoice.id.toString().toPersianDigits()} اطمینان دارید؟ این عمل قابل بازگشت نیست."
-                    else 
-                        "آیا می‌خواهید فاکتور #${invoice.invoice.id.toString().toPersianDigits()} را مرجوع کنید؟ با این کار یک فاکتور معکوس ثبت شده و موجودی انبار اصلاح می‌شود."
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (actionType == "delete") {
-                            viewModel.deleteInvoice(invoice)
-                        } else {
-                            viewModel.refundInvoice(invoice)
-                        }
-                        selectedInvoiceForAction = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (actionType == "delete") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("تایید")
+        ConfirmDialog(
+            title = if (actionType == "delete") "حذف فاکتور" else "مرجوع کردن فاکتور",
+            message = if (actionType == "delete")
+                "آیا از حذف فاکتور #${invoice.invoice.id.toString().toPersianDigits()} اطمینان دارید؟ این عمل قابل بازگشت نیست."
+            else
+                "آیا می‌خواهید فاکتور #${invoice.invoice.id.toString().toPersianDigits()} را مرجوع کنید؟ با این کار یک فاکتور معکوس ثبت شده و موجودی انبار اصلاح می‌شود.",
+            confirmText = "تایید",
+            cancelText = "انصراف",
+            onConfirm = {
+                if (actionType == "delete") {
+                    viewModel.deleteInvoice(invoice)
+                } else {
+                    viewModel.refundInvoice(invoice)
                 }
+                selectedInvoiceForAction = null
             },
-            dismissButton = {
-                TextButton(onClick = { selectedInvoiceForAction = null }) {
-                    Text("انصراف")
-                }
-            }
+            onDismiss = { selectedInvoiceForAction = null },
+            isDanger = actionType == "delete"
         )
     }
 }

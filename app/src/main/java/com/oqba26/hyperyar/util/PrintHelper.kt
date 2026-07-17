@@ -2,6 +2,7 @@ package com.oqba26.hyperyar.util
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import com.oqba26.hyperyar.data.InvoiceWithItems
 
 object PrintHelper {
@@ -32,7 +33,25 @@ object PrintHelper {
         return sb.toString()
     }
 
-    fun sendToPrinter(context: Context, text: String) {
+    fun sendToPrinter(context: Context, text: String, printerType: String = "SHARE", printerAddress: String = "") {
+        when (printerType) {
+            "BT" -> {
+                // TODO: Implement Bluetooth ESC/POS printing
+                Toast.makeText(context, "در حال ارسال به چاپگر بلوتوث: $printerAddress", Toast.LENGTH_SHORT).show()
+                shareAsFallback(context, text)
+            }
+            "USB" -> {
+                // TODO: Implement USB ESC/POS printing
+                Toast.makeText(context, "در حال ارسال به چاپگر USB: $printerAddress", Toast.LENGTH_SHORT).show()
+                shareAsFallback(context, text)
+            }
+            else -> {
+                shareAsFallback(context, text)
+            }
+        }
+    }
+
+    private fun shareAsFallback(context: Context, text: String) {
         val sendIntent = Intent().apply {
             action = Intent.ACTION_SEND
             putExtra(Intent.EXTRA_TEXT, text)

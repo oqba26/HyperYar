@@ -161,11 +161,11 @@ fun ProductScreen(
     }
 
     if (showLowStockDialog) {
-        AlertDialog(
+        HyperDialog(
             onDismissRequest = { showLowStockDialog = false },
-            title = { Text("کالاهای کم موجودی") },
-            text = {
-                LazyColumn {
+            title = "کالاهای کم موجودی",
+            content = {
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                     items(lowStockProducts) { product ->
                         ListItem(
                             headlineContent = { Text(product.name) },
@@ -175,16 +175,28 @@ fun ProductScreen(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showLowStockDialog = false }) { Text("بستن") } }
+            dismissButton = {
+                Button(
+                    onClick = { showLowStockDialog = false },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text("بستن", style = MaterialTheme.typography.labelLarge)
+                }
+            }
         )
     }
 
     if (showExpiringDialog) {
-        AlertDialog(
+        HyperDialog(
             onDismissRequest = { showExpiringDialog = false },
-            title = { Text("کالاهای نزدیک به انقضا (۷ روز آینده)") },
-            text = {
-                LazyColumn {
+            title = "کالاهای نزدیک به انقضا",
+            content = {
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                     items(expiringProducts) { product ->
                         ListItem(
                             headlineContent = { Text(product.name) },
@@ -194,24 +206,115 @@ fun ProductScreen(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showExpiringDialog = false }) { Text("بستن") } }
+            dismissButton = {
+                Button(
+                    onClick = { showExpiringDialog = false },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text("بستن", style = MaterialTheme.typography.labelLarge)
+                }
+            }
         )
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            MediumTopAppBar(
                 title = { 
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 actions = {
-                    Box {
+                    if (isAdmin) {
+                        Box {
+                            Surface(
+                                onClick = { showFileMenu = true },
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ImportExport,
+                                        contentDescription = "فایل‌ها",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "فایل‌ها",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = showFileMenu,
+                                onDismissRequest = { showFileMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("خروجی پشتیبان (JSON)") },
+                                    onClick = {
+                                        showFileMenu = false
+                                        scope.launch {
+                                            val database = AppDatabase.getDatabase(context)
+                                            val file = BackupHelper.exportBackup(context, database)
+                                            
+                                            val uri = FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.provider",
+                                                file
+                                            )
+                                            
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "application/json"
+                                                putExtra(Intent.EXTRA_STREAM, uri)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "ذخیره فایل پشتیبان"))
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("ورود از CSV") },
+                                    onClick = { 
+                                        showFileMenu = false
+                                        csvImportLauncher.launch("text/comma-separated-values") 
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("خروجی CSV") },
+                                    onClick = {
+                                        showFileMenu = false
+                                        val file = FileHelper.exportProductsToCsv(context, products)
+                                        val uri = FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.provider",
+                                            file
+                                        )
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/comma-separated-values"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "خروجی محصولات"))
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
                         Surface(
-                            onClick = { showFileMenu = true },
+                            onClick = { showAddDialog = true },
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
                             contentColor = MaterialTheme.colorScheme.onPrimary,
                             shape = MaterialTheme.shapes.medium
@@ -221,92 +324,15 @@ fun ProductScreen(
                                 modifier = Modifier.padding(vertical = 4.dp, horizontal = 10.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.ImportExport,
-                                    contentDescription = "فایل‌ها",
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Product",
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = "فایل‌ها",
+                                    text = "افتودن کالا",
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
-                        }
-                        DropdownMenu(
-                            expanded = showFileMenu,
-                            onDismissRequest = { showFileMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("خروجی پشتیبان (JSON)") },
-                                onClick = {
-                                    showFileMenu = false
-                                    scope.launch {
-                                        val database = AppDatabase.getDatabase(context)
-                                        val file = BackupHelper.exportBackup(context, database)
-                                        
-                                        val uri = FileProvider.getUriForFile(
-                                            context,
-                                            "${context.packageName}.provider",
-                                            file
-                                        )
-                                        
-                                        val intent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "application/json"
-                                            putExtra(Intent.EXTRA_STREAM, uri)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(intent, "ذخیره فایل پشتیبان"))
-                                    }
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("ورود از CSV") },
-                                onClick = { 
-                                    showFileMenu = false
-                                    csvImportLauncher.launch("text/comma-separated-values") 
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("خروجی CSV") },
-                                onClick = {
-                                    showFileMenu = false
-                                    val file = FileHelper.exportProductsToCsv(context, products)
-                                    val uri = FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.provider",
-                                        file
-                                    )
-                                    val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/comma-separated-values"
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(intent, "خروجی محصولات"))
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Surface(
-                        onClick = { showAddDialog = true },
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Product",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "افزودن کالا",
-                                style = MaterialTheme.typography.labelSmall
-                            )
                         }
                     }
                     

@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         User::class,
         WasteLog::class
     ], 
-    version = 4, 
+    version = 5, 
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
